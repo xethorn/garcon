@@ -12,6 +12,7 @@ you should create a main task that will then split the work.
 """
 
 import boto.swf.layer2 as swf
+import msgpack
 
 ACTIVITY_STANDBY = 0
 ACTIVITY_SCHEDULED = 1
@@ -31,12 +32,15 @@ class Activity(swf.ActivityWorker):
         """
 
         activity_task = self.poll()
-        context = activity_task.get('input', {})
+        packed_context = activity_task.get('input')
+        context = dict()
+        if packed_context:
+            context = msgpack.unpackb(packed_context, encoding='utf-8')
 
         if 'activityId' in activity_task:
             try:
-                self.execute_activity(context)
-                self.complete()
+                context = self.execute_activity(context)
+                self.complete(msgpack.packb(context))
             except Exception as error:
                 self.fail(reason=str(error))
                 raise error
