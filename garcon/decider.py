@@ -103,8 +103,8 @@ class DeciderWorker(swf.Decider):
         the list of events provided. It looks at the list of all the available
         activities, and launch the ones that:
 
-        * are not been scheduled yet.
-        * have all the dependencies resolved.
+          * are not been scheduled yet.
+          * have all the dependencies resolved.
 
         If the decider is not able to find an uncompleted activity, the
         workflow can safely mark its execution as complete.

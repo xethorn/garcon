@@ -3,6 +3,6 @@ python:
     - "3.4"
 
 install: "pip install -r requirements.txt"
-script: "py.test tests/ --cov schema --cov-report term-missing"
+script: "py.test tests/ --cov garcon --cov-report term-missing"
 after_success:
     - coveralls
