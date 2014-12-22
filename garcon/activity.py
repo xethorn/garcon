@@ -53,13 +53,61 @@ class Activity(swf.ActivityWorker):
 
     def hydrate(self, data):
         """Hydrate the task with information provided.
+
+        Args:
+            data (dict): the data to use (if defined.)
         """
 
-        self.domain = self.name or data.get('domain')
         self.name = self.name or data.get('name')
+        self.domain = self.name or data.get('domain')
         self.requires = getattr(self, 'requires', []) or data.get('requires')
         self.task_list = self.task_list or data.get('task_list')
         self.tasks = getattr(self, 'tasks', []) or data.get('tasks')
+
+
+
+class ActivityWorker():
+
+    def __init__(self, flow, activities=None):
+        """Initiate an activity worker.
+
+        The activity worker take in consideration all the activities from a
+        flow, or specific activities. Some activities (tasks) might require
+        more power than others, and be then launched on different machines.
+
+        If a list of activities is passed, the worker will be focused on
+        completing those and will ignore all the others.
+
+        Args:
+            flow (module): the flow module.
+            activities (list): the list of activities that this worker should
+                handle.
+        """
+
+        self.flow = flow
+        self.activities = activity.find_activities(self.flow)
+        self.worker_activities = activities
+
+    def run(self):
+        """Run the activities.
+        """
+
+        for activity in self.activities:
+            if (self.worker_activities and
+                    not activity.name in self.worker_activities):
+                continue
+
+            Thread(target=worker_runner, args=(activity,)).start()
+
+
+def worker_runner(worker):
+    """Run indefinitely the worker.
+
+    Args:
+        worker (object): the Activity worker.
+    """
+    while(True):
+        worker.run()
 
 
 def create(domain):
@@ -68,6 +116,10 @@ def create(domain):
     The helper method simplifies the creation of an activity by setting the
     domain, the task list, and the activity dependencies (what other
     activities) need to be completed before this one can run.
+
+    Note:
+        The task list is generated based on the domain and the name of the
+        activity. Always make sure your activity name is unique.
     """
 
     def wrapper(**options):
@@ -84,7 +136,14 @@ def create(domain):
 
 
 def find_available_activities(flow, history):
-    """Hydrate the flow activities from an event.
+    """Find all available activities of a flow.
+
+    The history contains all the information of our activities (their state).
+    This method focuses on finding all the activities that need to run.
+
+    Args:
+        flow (module): the flow module.
+        history (dict): the history information.
     """
 
     for activity in find_activities(flow):
@@ -92,7 +151,6 @@ def find_available_activities(flow, history):
         # not in standby anymore, it's either processing or has been completed.
         # The activity is thus not available anymore.
         event = history.get(activity.name)
-        pprint.pprint(event)
 
         if event:
             continue
@@ -110,6 +168,15 @@ def find_available_activities(flow, history):
 
 def find_uncomplete_activities(flow, history):
     """Find uncomplete activities.
+
+    Uncomplete activities are all the activities that are not marked as
+    completed.
+
+    Args:
+        flow (module): the flow module.
+        history (dict): the history information.
+    Yield:
+        activity: The available activity.
     """
 
     for activity in find_activities(flow):
@@ -119,7 +186,12 @@ def find_uncomplete_activities(flow, history):
 
 
 def find_activities(flow):
-    """Find activities in a flow.
+    """Retrieves all the activities from a flow.
+
+    Args:
+        flow (module): the flow module.
+    Return:
+        List of all the activities for the flow.
     """
 
     activities = []

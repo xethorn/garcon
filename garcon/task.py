@@ -21,27 +21,21 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 class Tasks():
-    """Base class for tasks.
-    """
 
     def __init__(self, *args):
         self.tasks = args
 
 
 class SyncTasks(Tasks):
-    """Synchronous tasks.
-    """
 
     def execute(self, context):
         for task in self.tasks:
             resp = task(context)
-            #context.update(resp or dict())
+            context.update(resp or dict())
         return True
 
 
 class AsyncTasks(Tasks):
-    """Asynchronous tasks.
-    """
 
     def __init__(self, *args, max_workers=3):
         self.tasks = args
@@ -55,6 +49,5 @@ class AsyncTasks(Tasks):
 
             for future in futures.as_completed(tasks):
                 data = future.result()
-                #context.update(data or {})
-
+                context.update(data or {})
         return True

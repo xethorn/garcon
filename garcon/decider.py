@@ -1,6 +1,14 @@
-from boto.swf.exceptions import SWFTypeAlreadyExistsError, SWFDomainAlreadyExistsError
+"""
+Decider Worker
+===============
+
+The decider worker is focused on orchestrating which activity needs to be
+executed and when based on the flow procided.
+"""
+
+from boto.swf.exceptions import SWFTypeAlreadyExistsError
+from boto.swf.exceptions import SWFDomainAlreadyExistsError
 from threading import Thread
-from time import sleep
 import boto.swf.layer2 as swf
 import time
 
@@ -10,7 +18,14 @@ from garcon import event
 
 class DeciderWorker(swf.Decider):
 
-    def __init__(self, flow, activities):
+    def __init__(self, flow, register=True):
+        """Initialize the Decider Worker.
+
+        Args:
+            flow (module): Flow module.
+            register (boolean): If this flow needs to be register on AWS.
+        """
+
         self.flow = flow
         self.domain = flow.domain
         self.task_list = flow.domain + '_decider'
@@ -18,14 +33,22 @@ class DeciderWorker(swf.Decider):
         self.activities = activity.find_activities(flow)
 
         super().__init__()
-        self.populate_swf()
+
+        if register:
+            self.register()
 
     def get_history(self, pool):
-        """Get all the events.
+        """Get all the history.
 
-        If there are more than 100 events, we need to capture all the remaining
-        events (supposing we are in the case where we have more than 1 worker
-        for a decision.)
+        The full history needs to be recovered from SWF to make sure that all
+        the activities have been properly scheduled. With boto, only the last
+        100 events are provided, this methods retrieves all events.
+
+        Args:
+            pool (object): The pool object (see AWS SWF for details.)
+        Return:
+            dict: list of all the activities and their state. It only contains
+                activities that have been scheduled with AWS.
         """
 
         events = pool['events']
@@ -39,12 +62,14 @@ class DeciderWorker(swf.Decider):
         events = [
             e for e in events if not e['eventType'].startswith('Decision')]
 
-        events = event.prepare_events(events)
-        return events
+        return event.activity_states_from_events(events)
 
 
-    def populate_swf(self):
-        """Populate SWF with the necessary data.
+    def register(self):
+        """Register the Workflow on SWF.
+
+        To work, SWF needs to have pre-registered the domain, the workflow,
+        and the different activities, this method takes care of this part.
         """
 
         registerables = []
@@ -72,7 +97,21 @@ class DeciderWorker(swf.Decider):
                     'already exists')
 
     def run(self):
+        """Run the decider.
+
+        The decider defines which task needs to be launched and when based on
+        the list of events provided. It looks at the list of all the available
+        activities, and launch the ones that:
+
+        * are not been scheduled yet.
+        * have all the dependencies resolved.
+
+        If the decider is not able to find an uncompleted activity, the
+        workflow can safely mark its execution as complete.
+        """
+
         pool = self.poll()
+
         if not 'events' in pool:
             return
 
@@ -94,25 +133,3 @@ class DeciderWorker(swf.Decider):
 
         self.complete(decisions=decisions)
         return True
-
-
-
-class ActivityWorker():
-
-    def __init__(self, flow, activities=None):
-        self.flow = flow
-        self.activities = activity.find_activities(self.flow)
-        self.worker_activities = activities
-
-    def run(self):
-        for activity in self.activities:
-            if (self.worker_activities and
-                    not activity.name in self.worker_activities):
-                continue
-
-            Thread(target=worker_runner, args=(activity,)).start()
-
-
-def worker_runner(worker):
-    while(True):
-        worker.run()
