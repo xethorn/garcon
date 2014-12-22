@@ -34,7 +34,7 @@ from garcon import activity
 from garcon import task
 
 
-domain = 'dev-mortali'
+domain = 'dev'
 create = activity.create(domain)
 
 activity_1 = create(
