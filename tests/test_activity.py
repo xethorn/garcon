@@ -87,6 +87,21 @@ def test_run_activity_with_result(monkeypatch, poll):
     assert current_activity.complete.call_args[0][0] == msgpack.packb(resp)
 
 
+def test_task_failure(monkeypatch, poll):
+    """Run an activity that has a bad task.
+    """
+
+    resp = dict(foo='bar')
+    mock = MagicMock(return_value=resp)
+    current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
+    current_activity.execute_activity.side_effect = Exception('fail')
+
+    with pytest.raises(Exception):
+        current_activity.run()
+
+    assert current_activity.fail.called
+
+
 def test_execute_activity(monkeypatch):
     """Test the execution of an activity.
     """
