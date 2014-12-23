@@ -43,7 +43,7 @@ class Activity(swf.ActivityWorker):
         if 'activityId' in activity_task:
             try:
                 context = self.execute_activity(context)
-                self.complete(msgpack.packb(context))
+                self.complete(result=msgpack.packb(context))
             except Exception as error:
                 self.fail(reason=str(error))
                 raise error

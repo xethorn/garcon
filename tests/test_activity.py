@@ -85,8 +85,8 @@ def test_run_activity_with_result(monkeypatch, poll):
     mock = MagicMock(return_value=resp)
     current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
     current_activity.run()
-
-    assert current_activity.complete.call_args[0][0] == msgpack.packb(resp)
+    result = current_activity.complete.call_args_list[0][1].get('result')
+    assert result == msgpack.packb(resp)
 
 
 def test_task_failure(monkeypatch, poll):
