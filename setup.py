@@ -3,7 +3,7 @@ from setuptools import setup
 
 
 setup(
-    name='Schema',
+    name='Garcon',
     version='0.0.1',
     url='https://github.com/xethorn/garcon/',
     author='Michael Ortali',
