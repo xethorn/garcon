@@ -11,8 +11,10 @@ you need something more specific, you should either create your own runner, or
 you should create a main task that will then split the work.
 """
 
+from threading import Thread
 import boto.swf.layer2 as swf
 import msgpack
+
 
 ACTIVITY_STANDBY = 0
 ACTIVITY_SCHEDULED = 1
@@ -34,6 +36,7 @@ class Activity(swf.ActivityWorker):
         activity_task = self.poll()
         packed_context = activity_task.get('input')
         context = dict()
+
         if packed_context:
             context = msgpack.unpackb(packed_context, encoding='utf-8')
 
@@ -44,6 +47,7 @@ class Activity(swf.ActivityWorker):
             except Exception as error:
                 self.fail(reason=str(error))
                 raise error
+
         return True
 
     def execute_activity(self, context):
@@ -89,7 +93,7 @@ class ActivityWorker():
         """
 
         self.flow = flow
-        self.activities = activity.find_activities(self.flow)
+        self.activities = find_activities(self.flow)
         self.worker_activities = activities
 
     def run(self):
@@ -110,8 +114,9 @@ def worker_runner(worker):
     Args:
         worker (object): the Activity worker.
     """
-    while(True):
-        worker.run()
+
+    while(worker.run()):
+        pass
 
 
 def create(domain):
