@@ -114,8 +114,8 @@ def worker_runner(worker):
         worker (object): the Activity worker.
     """
 
-    while(True):
-        worker.run()
+    while(worker.run()):
+        continue
 
 
 def create(domain):
