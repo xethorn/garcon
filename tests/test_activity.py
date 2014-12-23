@@ -140,8 +140,9 @@ def test_create_activity_worker(monkeypatch):
     from tests.fixtures.flows import example
 
     worker = activity.ActivityWorker(example)
-    assert worker.flow is example
     assert len(worker.activities) == 4
+
+    assert worker.flow is example
     assert not worker.worker_activities
 
 
@@ -150,12 +151,62 @@ def test_worker_run(monkeypatch):
     """
 
     monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    monkeypatch.setattr(activity.Activity, 'run', MagicMock(return_value=False))
+
     from tests.fixtures.flows import example
 
     worker = activity.ActivityWorker(example)
+    assert len(worker.activities) == 4
+    for current_activity in worker.activities:
+            monkeypatch.setattr(
+                current_activity, 'run', MagicMock(return_value=False))
+
     worker.run()
 
     assert len(worker.activities) == 4
     for current_activity in worker.activities:
         assert current_activity.run.called
+
+
+def test_worker_run_with_skipped_activities(monkeypatch):
+    """Test running the worker with defined activities.
+    """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    monkeypatch.setattr(activity.Activity, 'run', MagicMock(return_value=False))
+    from tests.fixtures.flows import example
+
+    worker = activity.ActivityWorker(example, activities=['activity_1'])
+    assert len(worker.worker_activities) == 1
+    for current_activity in worker.activities:
+            monkeypatch.setattr(
+                current_activity, 'run', MagicMock(return_value=False))
+
+    worker.run()
+
+    for current_activity in worker.activities:
+        if current_activity.name == 'activity_1':
+            assert current_activity.run.called
+        else:
+            assert not current_activity.run.called
+
+
+def test_worker_infinite_loop():
+    """Test the worker runner.
+    """
+
+    spy = MagicMock()
+
+    class Activity:
+        def __init__(self):
+            self.count = 0
+
+        def run(self):
+            spy()
+            self.count = self.count + 1
+            if self.count < 5:
+                return True
+            return False
+
+    activity.worker_runner(Activity())
+    assert spy.called
+    assert spy.call_count == 5
