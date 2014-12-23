@@ -47,8 +47,7 @@ class DeciderWorker(swf.Decider):
         Args:
             pool (object): The pool object (see AWS SWF for details.)
         Return:
-            dict: list of all the activities and their state. It only contains
-                activities that have been scheduled with AWS.
+            list: All the events.
         """
 
         events = pool['events']
@@ -59,10 +58,22 @@ class DeciderWorker(swf.Decider):
                 events += pool['events']
 
         # Remove all the events that are related to decisions and only.
-        events = [
-            e for e in events if not e['eventType'].startswith('Decision')]
+        return [e for e in events if not e['eventType'].startswith('Decision')]
 
-        return event.activity_states_from_events(events)
+    def get_activity_states(self, history):
+        """Get the activity states from the history.
+
+        From the full history extract the different activity states. Those
+        states contain
+
+        Args:
+            history (list): the full history.
+        Return:
+            dict: list of all the activities and their state. It only contains
+                activities that have been scheduled with AWS.
+        """
+
+        return event.activity_states_from_events(history)
 
 
     def register(self):
@@ -116,15 +127,19 @@ class DeciderWorker(swf.Decider):
             return
 
         history = self.get_history(pool)
+        activity_states = self.get_activity_states(history)
+        context = event.get_current_context(history)
+
         decisions = swf.Layer1Decisions()
 
-        for current in activity.find_available_activities(self.flow, history):
+        for current in activity.find_available_activities(
+                self.flow, activity_states):
             decisions.schedule_activity_task(
                 '%s-%i' % (current.name, time.time()),
                 current.name,
                 self.version,
                 task_list=current.task_list,
-                input='json object')
+                input=msgpack.packb(context))
         else:
             activities = list(
                 activity.find_uncomplete_activities(self.flow, history))

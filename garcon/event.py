@@ -1,4 +1,5 @@
 from garcon import activity
+import msgpack
 
 
 def activity_states_from_events(events):
@@ -48,3 +49,28 @@ def activity_states_from_events(events):
             })
 
     return activity_events
+
+
+def get_current_context(events):
+    """Get the current context from the list of events.
+
+    Each activity returns bits of information that needs to be provided to the
+    next activities.
+    """
+
+    events = sorted(events, key=lambda item: item.get('eventId'))
+    context = {}
+
+    for event in events:
+        event_id = event.get('eventId')
+        event_type = event.get('eventType')
+
+        if event_type != 'ActivityTaskCompleted':
+            continue
+
+        attributes = event['activityTaskCompletedEventAttributes']
+        result = attributes.get('result')
+        if result:
+            context.update(msgpack.unpackb(result, encoding='utf-8'))
+
+    return context
