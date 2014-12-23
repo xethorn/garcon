@@ -13,7 +13,7 @@ you should create a main task that will then split the work.
 
 from threading import Thread
 import boto.swf.layer2 as swf
-import msgpack
+import json
 
 
 ACTIVITY_STANDBY = 0
@@ -38,12 +38,12 @@ class Activity(swf.ActivityWorker):
         context = dict()
 
         if packed_context:
-            context = msgpack.unpackb(packed_context, encoding='utf-8')
+            context = json.loads(packed_context)
 
         if 'activityId' in activity_task:
             try:
                 context = self.execute_activity(context)
-                self.complete(result=msgpack.packb(context))
+                self.complete(result=json.dumps(context))
             except Exception as error:
                 self.fail(reason=str(error))
                 raise error
@@ -67,7 +67,7 @@ class Activity(swf.ActivityWorker):
         """
 
         self.name = self.name or data.get('name')
-        self.domain = self.name or data.get('domain')
+        self.domain = getattr(self, 'domain', '') or data.get('domain')
         self.requires = getattr(self, 'requires', []) or data.get('requires')
         self.task_list = self.task_list or data.get('task_list')
         self.tasks = getattr(self, 'tasks', []) or data.get('tasks')
@@ -104,7 +104,6 @@ class ActivityWorker():
             if (self.worker_activities and
                     not activity.name in self.worker_activities):
                 continue
-
             Thread(target=worker_runner, args=(activity,)).start()
 
 
@@ -115,8 +114,8 @@ def worker_runner(worker):
         worker (object): the Activity worker.
     """
 
-    while(worker.run()):
-        pass
+    while(True):
+        worker.run()
 
 
 def create(domain):
