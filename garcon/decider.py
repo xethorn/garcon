@@ -6,10 +6,11 @@ The decider worker is focused on orchestrating which activity needs to be
 executed and when based on the flow procided.
 """
 
-from boto.swf.exceptions import SWFTypeAlreadyExistsError
 from boto.swf.exceptions import SWFDomainAlreadyExistsError
+from boto.swf.exceptions import SWFTypeAlreadyExistsError
 from threading import Thread
 import boto.swf.layer2 as swf
+import json
 import time
 
 from garcon import activity
@@ -139,10 +140,11 @@ class DeciderWorker(swf.Decider):
                 current.name,
                 self.version,
                 task_list=current.task_list,
-                input=msgpack.packb(context))
+                input=json.dumps(context))
         else:
             activities = list(
-                activity.find_uncomplete_activities(self.flow, history))
+                activity.find_uncomplete_activities(
+                    self.flow, activity_states))
             if not activities:
                 decisions.complete_workflow_execution()
 

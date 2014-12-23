@@ -1,5 +1,5 @@
 from garcon import activity
-import msgpack
+import json
 
 
 def activity_states_from_events(events):
@@ -71,6 +71,6 @@ def get_current_context(events):
         attributes = event['activityTaskCompletedEventAttributes']
         result = attributes.get('result')
         if result:
-            context.update(msgpack.unpackb(result, encoding='utf-8'))
+            context.update(json.loads(result))
 
     return context

@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-import msgpack
+import json
 import pytest
 
 from garcon import activity
@@ -68,7 +68,7 @@ def test_run_activity_with_context(monkeypatch, poll):
     """
 
     context = dict(foo='bar')
-    poll.update(input=msgpack.packb(context))
+    poll.update(input=json.dumps(context))
 
     current_activity = activity_run(monkeypatch, poll=poll)
     current_activity.run()
@@ -86,7 +86,7 @@ def test_run_activity_with_result(monkeypatch, poll):
     current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
     current_activity.run()
     result = current_activity.complete.call_args_list[0][1].get('result')
-    assert result == msgpack.packb(resp)
+    assert result == json.dumps(resp)
 
 
 def test_task_failure(monkeypatch, poll):

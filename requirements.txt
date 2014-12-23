@@ -1,5 +1,4 @@
 boto==2.34.0
-msgpack-python==0.4.2
 pytest-cov==1.8.0
 pytest==2.6.3
 python-coveralls==2.4.3
