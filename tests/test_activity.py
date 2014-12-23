@@ -130,3 +130,32 @@ def test_hydrate_activity(monkeypatch):
         domain='domain',
         requires=[],
         tasks=[lambda: dict('val')]))
+
+
+def test_create_activity_worker(monkeypatch):
+    """Test the creation of an activity worker.
+    """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    from tests.fixtures.flows import example
+
+    worker = activity.ActivityWorker(example)
+    assert worker.flow is example
+    assert len(worker.activities) == 4
+    assert not worker.worker_activities
+
+
+def test_worker_run(monkeypatch):
+    """Test running the worker.
+    """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    monkeypatch.setattr(activity.Activity, 'run', MagicMock(return_value=False))
+    from tests.fixtures.flows import example
+
+    worker = activity.ActivityWorker(example)
+    worker.run()
+
+    assert len(worker.activities) == 4
+    for current_activity in worker.activities:
+        assert current_activity.run.called
