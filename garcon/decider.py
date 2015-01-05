@@ -140,7 +140,8 @@ class DeciderWorker(swf.Decider):
                 current.name,
                 self.version,
                 task_list=current.task_list,
-                input=json.dumps(context))
+                input=json.dumps(context),
+                start_to_close_timeout=current.timeout)
         else:
             activities = list(
                 activity.find_uncomplete_activities(
