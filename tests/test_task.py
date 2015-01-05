@@ -9,7 +9,7 @@ def test_synchronous_tasks():
 
     resp = dict(foo='bar')
     runner = task.SyncTasks(MagicMock(), MagicMock(return_value=resp))
-    result = runner.execute(dict())
+    result = runner.execute(None, dict())
 
     assert len(runner.tasks) == 2
 
@@ -37,7 +37,7 @@ def test_aynchronous_tasks():
     assert len(runner.tasks) == len(tasks)
 
     context = dict(hello='world')
-    resp = runner.execute(context)
+    resp = runner.execute(None, context)
 
     for current_task in tasks:
         assert current_task.called

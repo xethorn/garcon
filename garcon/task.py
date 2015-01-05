@@ -57,10 +57,10 @@ class Tasks():
 
 class SyncTasks(Tasks):
 
-    def execute(self, context):
+    def execute(self, activity, context):
         result = dict()
         for task in self.tasks:
-            resp = task(context)
+            resp = task(activity, context)
             result.update(resp or dict())
         return result
 
@@ -71,12 +71,12 @@ class AsyncTasks(Tasks):
         self.tasks = args
         self.max_workers = max_workers
 
-    def execute(self, context):
+    def execute(self, activity, context):
         result = dict()
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             tasks = []
             for task in self.tasks:
-                tasks.append(executor.submit(task, context))
+                tasks.append(executor.submit(task, activity, context))
 
             for future in futures.as_completed(tasks):
                 data = future.result()

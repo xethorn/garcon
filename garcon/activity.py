@@ -57,7 +57,7 @@ class Activity(swf.ActivityWorker):
             context (dict): The flow context.
         """
 
-        return self.tasks.execute(context)
+        return self.tasks.execute(self, context)
 
     def hydrate(self, data):
         """Hydrate the task with information provided.
