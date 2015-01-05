@@ -64,12 +64,16 @@ def get_current_context(events):
     for event in events:
         event_id = event.get('eventId')
         event_type = event.get('eventType')
+        result = None
 
-        if event_type != 'ActivityTaskCompleted':
-            continue
+        if event_type == 'ActivityTaskCompleted':
+            attributes = event['activityTaskCompletedEventAttributes']
+            result = attributes.get('result')
 
-        attributes = event['activityTaskCompletedEventAttributes']
-        result = attributes.get('result')
+        if event_type == 'WorkflowExecutionStarted':
+            attributes = event['workflowExecutionStartedEventAttributes']
+            result = attributes.get('input')
+
         if result:
             context.update(json.loads(result))
 
