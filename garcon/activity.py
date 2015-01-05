@@ -84,7 +84,7 @@ class Activity(swf.ActivityWorker):
             int: Task list timeout.
         """
 
-        return self.task_list.timeout
+        return self.tasks.timeout
 
 
 class ActivityWorker():
