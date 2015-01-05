@@ -72,6 +72,19 @@ class Activity(swf.ActivityWorker):
         self.task_list = self.task_list or data.get('task_list')
         self.tasks = getattr(self, 'tasks', []) or data.get('tasks')
 
+    @property
+    def timeout(self):
+        """Return the timeout in seconds.
+
+        This timeout corresponds on when the activity has started and when we
+        assume the activity has ended (which corresponds in boto to
+        start_to_close_timeout.)
+
+        Return:
+            int: Task list timeout.
+        """
+
+        return self.task_list.timeout
 
 
 class ActivityWorker():
