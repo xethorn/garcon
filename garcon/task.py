@@ -37,7 +37,8 @@ class Tasks():
         one thread completed at a time.)
 
         Return:
-            int: The timeout.
+            str: The timeout (boto requires the timeout to be a string and not
+                a regular number.)
         """
 
         timeout = 0
@@ -52,7 +53,7 @@ class Tasks():
 
             timeout = timeout + task_timeout
 
-        return timeout
+        return str(timeout)
 
 
 class SyncTasks(Tasks):
