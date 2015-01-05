@@ -54,7 +54,7 @@ def test_timeout_decorator():
     def test():
         pass
 
-    assert test.__garcon__.get('timeout') == timeout
+    assert test.__garcon__.get('timeout') == str(timeout)
 
 
 def test_decorator():
@@ -90,7 +90,7 @@ def test_calculate_default_timeout():
     """
 
     task_list = task.Tasks(lambda x: x)
-    assert task_list.timeout == task.DEFAULT_TASK_TIMEOUT
+    assert task_list.timeout == str(task.DEFAULT_TASK_TIMEOUT)
 
 
 def test_calculate_timeout():
@@ -104,10 +104,10 @@ def test_calculate_timeout():
         pass
 
     task_list = task.Tasks(task_a)
-    assert task_list.timeout == timeout
+    assert task_list.timeout == str(timeout)
 
     def task_b():
         pass
 
     task_list = task.Tasks(task_a, task_b)
-    assert task_list.timeout == timeout + task.DEFAULT_TASK_TIMEOUT
+    assert task_list.timeout == str(timeout + task.DEFAULT_TASK_TIMEOUT)
