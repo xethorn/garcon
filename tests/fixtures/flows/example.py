@@ -29,4 +29,4 @@ activity_4 = create(
     name='activity_4',
     requires=[activity_3, activity_2],
     tasks=task.SyncTasks(
-    lambda: print('activity_4')))
+        lambda: print('activity_4')))
