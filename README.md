@@ -37,7 +37,7 @@ from garcon import task
 domain = 'dev'
 create = activity.create(domain)
 
-activity_1 = create(
+test_activity_1 = create(
     name='activity_1',
     tasks=task.SyncTasks(
         lambda activity, context: print('activity_1')))
