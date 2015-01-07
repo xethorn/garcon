@@ -35,18 +35,22 @@ def activity_states_from_events(events):
                 event_id: activity_name
             })
 
-            activity_events.update({
-                activity_name: activity.ACTIVITY_SCHEDULED
-            })
+            activity_events.setdefault(
+                activity_name, []).append(activity.ACTIVITY_SCHEDULED)
+
+        elif event_type == 'ActivityTaskFailed':
+            activity_info = event.get('activityTaskFailedEventAttributes')
+            activity_name = event_id_name.get(
+                activity_info.get('scheduledEventId'))
+            activity_events.setdefault(
+                activity_name, []).append(activity.ACTIVITY_FAILED)
 
         elif event_type == 'ActivityTaskCompleted':
             activity_info = event.get('activityTaskCompletedEventAttributes')
             activity_name = event_id_name.get(
                 activity_info.get('scheduledEventId'))
-
-            activity_events.update({
-                activity_name: activity.ACTIVITY_COMPLETED
-            })
+            activity_events.setdefault(
+                activity_name, []).append(activity.ACTIVITY_COMPLETED)
 
     return activity_events
 

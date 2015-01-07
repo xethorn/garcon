@@ -127,27 +127,31 @@ class DeciderWorker(swf.Decider):
         if not 'events' in pool:
             return
 
+        print('decision time!')
         history = self.get_history(pool)
         activity_states = self.get_activity_states(history)
         context = event.get_current_context(history)
 
         decisions = swf.Layer1Decisions()
 
-        for current in activity.find_available_activities(
-                self.flow, activity_states):
-            decisions.schedule_activity_task(
-                '%s-%i' % (current.name, time.time()),
-                current.name,
-                self.version,
-                task_list=current.task_list,
-                input=json.dumps(context),
-                start_to_close_timeout=current.timeout)
-        else:
-            activities = list(
-                activity.find_uncomplete_activities(
-                    self.flow, activity_states))
-            if not activities:
-                decisions.complete_workflow_execution()
+        try:
+            for current in activity.find_available_activities(
+                    self.flow, activity_states):
+                decisions.schedule_activity_task(
+                    '%s-%i' % (current.name, time.time()),
+                    current.name,
+                    self.version,
+                    task_list=current.task_list,
+                    input=json.dumps(context),
+                    start_to_close_timeout=current.timeout)
+            else:
+                activities = list(
+                    activity.find_uncomplete_activities(
+                        self.flow, activity_states))
+                if not activities:
+                    decisions.complete_workflow_execution()
+        except Exception as e:
+            decisions.fail_workflow_execution(reason=str(e))
 
         self.complete(decisions=decisions)
         return True

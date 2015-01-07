@@ -19,6 +19,7 @@ import json
 ACTIVITY_STANDBY = 0
 ACTIVITY_SCHEDULED = 1
 ACTIVITY_COMPLETED = 2
+ACTIVITY_FAILED = 3
 
 
 class Activity(swf.ActivityWorker):
@@ -46,7 +47,6 @@ class Activity(swf.ActivityWorker):
                 self.complete(result=json.dumps(context))
             except Exception as error:
                 self.fail(reason=str(error))
-                raise error
 
         return True
 
@@ -69,6 +69,7 @@ class Activity(swf.ActivityWorker):
         self.name = self.name or data.get('name')
         self.domain = getattr(self, 'domain', '') or data.get('domain')
         self.requires = getattr(self, 'requires', []) or data.get('requires')
+        self.retry = getattr(self, 'retry', None) or data.get('retry', 0)
         self.task_list = self.task_list or data.get('task_list')
         self.tasks = getattr(self, 'tasks', []) or data.get('tasks')
 
@@ -149,6 +150,7 @@ def create(domain):
             domain=domain,
             name=options.get('name'),
             requires=options.get('requires', []),
+            retry=options.get('retry'),
             task_list=domain + '_' + options.get('name'),
             tasks=options.get('tasks', []),
         ))
@@ -174,12 +176,17 @@ def find_available_activities(flow, history):
         event = history.get(activity.name)
 
         if event:
-            continue
+            if event[-1] != ACTIVITY_FAILED:
+                continue
+            elif (not activity.retry or
+                    activity.retry < count_activity_failures(event)):
+                raise Exception(
+                    'The activity failures has exceeded its retry limit.')
 
         add = True
         for requirement in activity.requires:
-            requirement_evt = history.get(requirement.name)
-            if not requirement_evt == ACTIVITY_COMPLETED:
+            requirement_evt = history.get(requirement.name) or []
+            if not ACTIVITY_COMPLETED in requirement_evt:
                 add = False
                 break
 
@@ -201,8 +208,8 @@ def find_uncomplete_activities(flow, history):
     """
 
     for activity in find_activities(flow):
-        event = history.get(activity.name)
-        if not event or event != ACTIVITY_COMPLETED:
+        evts = history.get(activity.name)
+        if not evts or ACTIVITY_COMPLETED not in evts:
             yield activity
 
 
@@ -221,3 +228,13 @@ def find_activities(flow):
         if isinstance(instance, Activity):
             activities.append(instance)
     return activities
+
+
+def count_activity_failures(events):
+    """Count the number of times an activity has failed.
+
+    Return:
+        int: The number of times an activity has failed.
+    """
+
+    return len([evt for evt in events if evt == ACTIVITY_FAILED])

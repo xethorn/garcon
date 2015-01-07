@@ -97,9 +97,7 @@ def test_task_failure(monkeypatch, poll):
     mock = MagicMock(return_value=resp)
     current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
     current_activity.execute_activity.side_effect = Exception('fail')
-
-    with pytest.raises(Exception):
-        current_activity.run()
+    current_activity.run()
 
     assert current_activity.fail.called
 
