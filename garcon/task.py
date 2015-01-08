@@ -61,7 +61,8 @@ class SyncTasks(Tasks):
     def execute(self, activity, context):
         result = dict()
         for task in self.tasks:
-            resp = task(activity, context)
+            task_context = dict(list(result.items()) + list(context.items()))
+            resp = task(activity, task_context)
             result.update(resp or dict())
         return result
 
