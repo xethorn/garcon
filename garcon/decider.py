@@ -127,7 +127,6 @@ class DeciderWorker(swf.Decider):
         if not 'events' in pool:
             return
 
-        print('decision time!')
         history = self.get_history(pool)
         activity_states = self.get_activity_states(history)
         context = event.get_current_context(history)
