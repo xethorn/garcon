@@ -219,7 +219,7 @@ def test_activity_launch_sequence():
     from tests.fixtures.flows import example
 
     # First available activity is the activity_1.
-    history = event.activity_states_from_events(decider.history[:1])
+    history = event.activity_states_from_events(decider.history['events'][:1])
     activities = list(activity.find_available_activities(example, history))
     uncomplete = list(activity.find_uncomplete_activities(example, history))
     assert len(activities) == 1
@@ -227,14 +227,14 @@ def test_activity_launch_sequence():
     assert activities[0] == example.activity_1
 
     # In between activities should not launch activities.
-    history = event.activity_states_from_events(decider.history[:5])
+    history = event.activity_states_from_events(decider.history['events'][:5])
     activities = list(activity.find_available_activities(example, history))
     uncomplete = list(activity.find_uncomplete_activities(example, history))
     assert len(activities) == 0
     assert len(uncomplete) == 4
 
     # Two activities are launched in parallel: 2 and 3.
-    history = event.activity_states_from_events(decider.history[:7])
+    history = event.activity_states_from_events(decider.history['events'][:7])
     activities = list(activity.find_available_activities(example, history))
     uncomplete = list(activity.find_uncomplete_activities(example, history))
     assert len(activities) == 2
@@ -242,14 +242,14 @@ def test_activity_launch_sequence():
 
     # Activity 3 completes before activity 2. Activity 4 depends on 2 and 3 to
     # complete.
-    history = event.activity_states_from_events(decider.history[:14])
+    history = event.activity_states_from_events(decider.history['events'][:14])
     activities = list(activity.find_available_activities(example, history))
     uncomplete = list(activity.find_uncomplete_activities(example, history))
     assert len(activities) == 0
     assert example.activity_3 not in uncomplete
 
     # Activity 2 - 3 completed.
-    history = event.activity_states_from_events(decider.history[:22])
+    history = event.activity_states_from_events(decider.history['events'][:22])
     activities = list(activity.find_available_activities(example, history))
     uncomplete = list(activity.find_uncomplete_activities(example, history))
     assert len(activities) == 1
@@ -259,7 +259,7 @@ def test_activity_launch_sequence():
     assert example.activity_3 not in uncomplete
 
     # Close
-    history = event.activity_states_from_events(decider.history[:25])
+    history = event.activity_states_from_events(decider.history['events'][:25])
     activities = list(activity.find_available_activities(example, history))
     uncomplete = list(activity.find_uncomplete_activities(example, history))
     assert not activities
