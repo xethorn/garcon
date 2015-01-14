@@ -1,4 +1,4 @@
-history = [{'eventId': 1,
+history = { 'events': [{'eventId': 1,
   'eventTimestamp': 1419350960.696,
   'eventType': 'WorkflowExecutionStarted',
   'workflowExecutionStartedEventAttributes': {'childPolicy': 'TERMINATE',
@@ -147,4 +147,8 @@ history = [{'eventId': 1,
  {'decisionTaskStartedEventAttributes': {'scheduledEventId': 26},
   'eventId': 27,
   'eventTimestamp': 1419351027.555,
-  'eventType': 'DecisionTaskStarted'}]
+  'eventType': 'DecisionTaskStarted'}],
+  'workflowExecution': {
+    'runId': '123abc=',
+    'workflowId': 'test-workflow-id'}
+}

@@ -61,6 +61,26 @@ class DeciderWorker(swf.Decider):
         # Remove all the events that are related to decisions and only.
         return [e for e in events if not e['eventType'].startswith('Decision')]
 
+    def get_workflow_execution_info(self, pool):
+        """Get the workflow execution info from a given pool if it exists.
+
+        Args:
+            pool (object): The pool object (see AWS SWF for details.)
+        Return:
+            `dict`: Workflow execution info including workflowId and runId.
+        """
+
+        execution_info = None
+        if 'workflowExecution' in pool and 'workflowId' in \
+                pool['workflowExecution'] and  'runId' in \
+                pool['workflowExecution']:
+            execution_info = {
+                'execution.workflow_id' : pool['workflowExecution']['workflowId'],
+                'execution.run_id' : pool['workflowExecution']['runId']
+            }
+
+        return execution_info
+
     def get_activity_states(self, history):
         """Get the activity states from the history.
 
@@ -129,7 +149,11 @@ class DeciderWorker(swf.Decider):
 
         history = self.get_history(pool)
         activity_states = self.get_activity_states(history)
+        workflow_execution_info = self.get_workflow_execution_info(pool)
         context = event.get_current_context(history)
+
+        if workflow_execution_info is not None:
+            context.update(workflow_execution_info)
 
         decisions = swf.Layer1Decisions()
 
