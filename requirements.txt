@@ -1,4 +1,4 @@
-boto==2.34.0
-pytest-cov==1.8.0
-pytest==2.6.3
+boto==2.35.1
+pytest-cov==1.8.1
+pytest==2.6.4
 python-coveralls==2.4.3

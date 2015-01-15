@@ -16,5 +16,6 @@ setup(
     zip_safe=False,
     classifiers=[
         'Development Status :: Alpha',
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',
     ],)

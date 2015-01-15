@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Decider Worker
 ===============
@@ -33,7 +34,7 @@ class DeciderWorker(swf.Decider):
         self.version = '1.0'
         self.activities = activity.find_activities(flow)
 
-        super().__init__()
+        super(DeciderWorker, self).__init__()
 
         if register:
             self.register()

@@ -1,4 +1,8 @@
-from unittest.mock import MagicMock
+from __future__ import absolute_import
+try:
+    from unittest.mock import MagicMock
+except:
+    from mock import MagicMock
 import boto.swf.layer2 as swf
 from boto.swf import layer1
 import pytest

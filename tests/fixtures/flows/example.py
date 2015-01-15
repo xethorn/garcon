@@ -1,3 +1,4 @@
+from __future__ import print_function
 import boto.swf.layer2 as swf
 
 from garcon import activity

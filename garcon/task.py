@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Task
 ====
@@ -69,9 +70,9 @@ class SyncTasks(Tasks):
 
 class AsyncTasks(Tasks):
 
-    def __init__(self, *args, max_workers=3):
+    def __init__(self, *args, **kwargs):
         self.tasks = args
-        self.max_workers = max_workers
+        self.max_workers = kwargs.get('max_workers', 3)
 
     def execute(self, activity, context):
         result = dict()
