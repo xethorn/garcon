@@ -16,6 +16,7 @@ from threading import Thread
 import boto.swf.layer2 as swf
 import json
 
+from garcon import log
 
 ACTIVITY_STANDBY = 0
 ACTIVITY_SCHEDULED = 1
@@ -23,7 +24,7 @@ ACTIVITY_COMPLETED = 2
 ACTIVITY_FAILED = 3
 
 
-class Activity(swf.ActivityWorker):
+class Activity(swf.ActivityWorker, log.GarconLogger):
     version = '1.0'
     task_list = None
 
@@ -41,6 +42,7 @@ class Activity(swf.ActivityWorker):
 
         if packed_context:
             context = json.loads(packed_context)
+            self.set_log_context(context)
 
         if 'activityId' in activity_task:
             try:
@@ -48,6 +50,8 @@ class Activity(swf.ActivityWorker):
                 self.complete(result=json.dumps(context))
             except Exception as error:
                 self.fail(reason=str(error))
+
+        self.unset_log_context()
 
         return True
 
@@ -153,7 +157,7 @@ def create(domain):
             requires=options.get('requires', []),
             retry=options.get('retry'),
             task_list=domain + '_' + options.get('name'),
-            tasks=options.get('tasks', []),
+            tasks=options.get('tasks', [])
         ))
         return activity
     return wrapper
@@ -234,6 +238,8 @@ def find_activities(flow):
 def count_activity_failures(events):
     """Count the number of times an activity has failed.
 
+    Args:
+        events (dict): list of activity events.
     Return:
         int: The number of times an activity has failed.
     """
