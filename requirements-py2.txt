@@ -1,0 +1,3 @@
+-r requirements.txt
+mock==1.0.1
+futures==2.2.0

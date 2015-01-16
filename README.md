@@ -9,7 +9,7 @@ Lightweight library for AWS SWF.
 
 ### Requirements
 
-* Python 3.4 (tested.)
+* Python 2.7, 3.4 (tested.)
 * Boto 2.34.0 (tested.)
 
 ### Goal
@@ -28,6 +28,7 @@ be ran in parallel. The workflow ends after the completion of activity_4 which
 requires activity_2 and activity_3 to be completed.
 
 ```python
+from __future__ import print_function
 import boto.swf.layer2 as swf
 
 from garcon import activity
