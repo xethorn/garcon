@@ -1,4 +1,4 @@
-garcon
+garcon [![Build Status](https://travis-ci.org/xethorn/garcon.svg?branch=master)](https://travis-ci.org/xethorn/garcon)
 ======
 
 Lightweight library for AWS SWF.
@@ -9,8 +9,8 @@ Lightweight library for AWS SWF.
 
 ### Requirements
 
-* Python 2.7, 3.4 (tested.)
-* Boto 2.34.0 (tested.)
+* Python 2.7, 3.4 (tested)
+* Boto 2.34.0 (tested)
 
 ### Goal
 
