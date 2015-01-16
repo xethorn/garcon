@@ -68,7 +68,8 @@ class DeciderWorker(swf.Decider):
         Args:
             pool (object): The pool object (see AWS SWF for details.)
         Return:
-            `dict`: Workflow execution info including workflowId and runId.
+            `dict`: Workflow execution info including domain, workflowId and
+            runId.
         """
 
         execution_info = None
@@ -76,6 +77,7 @@ class DeciderWorker(swf.Decider):
                 pool['workflowExecution'] and  'runId' in \
                 pool['workflowExecution']:
             execution_info = {
+                'execution.domain' : self.domain,
                 'execution.workflow_id' : pool['workflowExecution']['workflowId'],
                 'execution.run_id' : pool['workflowExecution']['runId']
             }

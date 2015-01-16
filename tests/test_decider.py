@@ -50,6 +50,7 @@ def test_get_workflow_execution_info(monkeypatch):
 
     # Test extracting workflow execution info
     assert d.get_workflow_execution_info(pool.history) == {
+        'execution.domain': 'dev',
         'execution.run_id': '123abc=',
         'execution.workflow_id': 'test-workflow-id'}
 
