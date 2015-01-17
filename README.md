@@ -75,3 +75,9 @@ test_activity_4 = create(
 ├── __init__.py
 └── task_example.py # Your different tasks.
 ```
+
+### Contributors
+
+* Michael Ortali (@[xethorn](github.com/xethorn))
+* Adam Griffiths ([@adamlwgriffiths](github.com/adamlwgriffiths))
+* Raphael Antonmattei (@[rantonmattei](github.com/rantonmattei))
