@@ -49,10 +49,15 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
                 context = self.execute_activity(context)
                 self.complete(result=json.dumps(context))
             except Exception as error:
-                self.fail(reason=str(error))
+                # If the workflow has been stopped, it is not possible for the
+                # activity to be updated – it throws an exception which stops
+                # the worker immediately.
+                try:
+                    self.fail(reason=str(error))
+                except:
+                    pass
 
         self.unset_log_context()
-
         return True
 
     def execute_activity(self, context):
