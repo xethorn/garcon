@@ -32,7 +32,7 @@ from __future__ import print_function
 import boto.swf.layer2 as swf
 
 from garcon import activity
-from garcon import task
+from garcon import runner
 
 
 domain = 'dev'
@@ -40,26 +40,26 @@ create = activity.create(domain)
 
 test_activity_1 = create(
     name='activity_1',
-    tasks=task.Sync(
+    tasks=runner.Sync(
         lambda activity, context: print('activity_1')))
 
 test_activity_2 = create(
     name='activity_2',
     requires=[test_activity_1],
-    tasks=task.Async(
+    tasks=runner.Async(
         lambda activity, context: print('activity_2_task_1'),
         lambda activity, context: print('activity_2_task_2')))
 
 test_activity_3 = create(
     name='activity_3',
     requires=[test_activity_1],
-    tasks=task.Sync(
+    tasks=runner.Sync(
         lambda activity, context: print('activity_3')))
 
 test_activity_4 = create(
     name='activity_4',
     requires=[test_activity_3, test_activity_2],
-    tasks=task.Sync(
+    tasks=runner.Sync(
     lambda activity, context: print('activity_4')))
 ```
 
