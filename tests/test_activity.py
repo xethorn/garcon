@@ -7,8 +7,9 @@ import json
 import pytest
 
 from garcon import activity
-from garcon import task
 from garcon import event
+from garcon import runner
+from garcon import task
 from tests.fixtures import decider
 
 
@@ -115,7 +116,7 @@ def test_execute_activity(monkeypatch):
     custom_task = MagicMock(return_value=resp)
 
     current_activity = activity.Activity()
-    current_activity.tasks = task.SyncTasks(custom_task)
+    current_activity.tasks = runner.Sync(custom_task)
 
     val = current_activity.execute_activity(dict(foo='bar'))
 
