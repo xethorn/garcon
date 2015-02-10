@@ -7,7 +7,7 @@ Activities are self generated classes to which you can pass an identifier,
 and a list of tasks to perform. The activities are in between the decider and
 the task.
 
-For ease, two types of task runners are available: SyncTasks and AsyncTasks. If
+For ease, two types of task runners are available: Sync and Async. If
 you need something more specific, you should either create your own runner, or
 you should create a main task that will then split the work.
 """
