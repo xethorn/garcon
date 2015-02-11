@@ -58,7 +58,7 @@ class Sync(BaseRunner):
         result = dict()
         for task in self.tasks:
             task_context = dict(list(result.items()) + list(context.items()))
-            resp = task(activity, task_context)
+            resp = task(task_context, activity=activity)
             result.update(resp or dict())
         return result
 
@@ -74,7 +74,7 @@ class Async(BaseRunner):
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             tasks = []
             for task in self.tasks:
-                tasks.append(executor.submit(task, activity, context))
+                tasks.append(executor.submit(task, context, activity=activity))
 
             for future in futures.as_completed(tasks):
                 data = future.result()
