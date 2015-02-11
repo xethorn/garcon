@@ -14,9 +14,11 @@ you should create a main task that will then split the work.
 
 from threading import Thread
 import boto.swf.layer2 as swf
+import itertools
 import json
 
 from garcon import log
+from garcon import utils
 
 ACTIVITY_STANDBY = 0
 ACTIVITY_SCHEDULED = 1
@@ -82,6 +84,37 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         self.retry = getattr(self, 'retry', None) or data.get('retry', 0)
         self.task_list = self.task_list or data.get('task_list')
         self.tasks = getattr(self, 'tasks', []) or data.get('tasks')
+        self.generators = getattr(
+            self, 'generators', None) or data.get('generators')
+
+    def instances(self, context):
+        """Get all the instances for one activity based on the current context.
+
+        Args:
+            context (dict): the current context.
+        Return:
+            list: all the instances of the activity (for a current workflow
+                execution.)
+        """
+
+        if not self.generators:
+            yield ('%s-%s' % (self.name, 1), dict())
+            return
+
+        generator_values = []
+        for generator in self.generators:
+            generator_values.append(generator(context))
+
+        for generator_contexts in itertools.product(*generator_values):
+            # Each generator returns a context, merge all the contexts
+            # to only be one - which can be used to 1/ create the id of the
+            # activity and 2/ be passed as a local context.
+            instance_context = dict()
+            for current_generator_context in generator_contexts:
+                instance_context.update(current_generator_context.items())
+
+            activity_id = utils.create_dictionary_key(instance_context)
+            yield ('%s-%s' % (self.name, activity_id), instance_context)
 
     @property
     def timeout(self):
@@ -117,7 +150,7 @@ class ActivityWorker():
         """
 
         self.flow = flow
-        self.activities = find_activities(self.flow)
+        self.activities = find_workflow_activities(self.flow)
         self.worker_activities = activities
 
     def run(self):
@@ -159,6 +192,7 @@ def create(domain):
         activity.hydrate(dict(
             domain=domain,
             name=options.get('name'),
+            generators=options.get('generators', []),
             requires=options.get('requires', []),
             retry=options.get('retry'),
             task_list=domain + '_' + options.get('name'),
@@ -168,7 +202,7 @@ def create(domain):
     return wrapper
 
 
-def find_available_activities(flow, history):
+def find_available_activities(flow, history, context):
     """Find all available activities of a flow.
 
     The history contains all the information of our activities (their state).
@@ -177,34 +211,37 @@ def find_available_activities(flow, history):
     Args:
         flow (module): the flow module.
         history (dict): the history information.
+        context (dict): from the context find the available activities.
     """
 
-    for activity in find_activities(flow):
+    for activity, instance in find_activities(flow, context):
         # If an event is already available for the activity, it means it is
         # not in standby anymore, it's either processing or has been completed.
         # The activity is thus not available anymore.
-        event = history.get(activity.name)
+        events = history.get(activity.name, {}).get(instance[0])
 
-        if event:
-            if event[-1] != ACTIVITY_FAILED:
+        if events:
+            if events[-1] != ACTIVITY_FAILED:
                 continue
             elif (not activity.retry or
-                    activity.retry < count_activity_failures(event)):
+                    activity.retry < count_activity_failures(events)):
                 raise Exception(
                     'The activity failures has exceeded its retry limit.')
 
-        add = True
         for requirement in activity.requires:
-            requirement_evt = history.get(requirement.name) or []
-            if not ACTIVITY_COMPLETED in requirement_evt:
-                add = False
-                break
+            require_history = history.get(requirement.name)
 
-        if add:
-            yield activity
+            if not require_history:
+                return
+
+            for requirement_evt in require_history.values():
+                if not ACTIVITY_COMPLETED in requirement_evt:
+                    return
+
+        yield (activity, instance)
 
 
-def find_uncomplete_activities(flow, history):
+def find_uncomplete_activities(flow, history, context):
     """Find uncomplete activities.
 
     Uncomplete activities are all the activities that are not marked as
@@ -213,17 +250,33 @@ def find_uncomplete_activities(flow, history):
     Args:
         flow (module): the flow module.
         history (dict): the history information.
+        context (dict): from the context find the available activities.
     Yield:
         activity: The available activity.
     """
 
-    for activity in find_activities(flow):
-        evts = history.get(activity.name)
+    for activity, instance in find_activities(flow, context):
+        evts = history.get(activity.name, {}).get(instance[0])
         if not evts or ACTIVITY_COMPLETED not in evts:
-            yield activity
+            yield (activity, instance)
 
 
-def find_activities(flow):
+def find_workflow_activities(flow):
+    """Retrieves all the activities from a flow
+
+    Args:
+        flow (module): the flow module.
+    Return:
+        list: all the activities.
+    """
+
+    for module_attribute in dir(flow):
+        current_activity = getattr(flow, module_attribute)
+        if isinstance(current_activity, Activity):
+            yield current_activity
+
+
+def find_activities(flow, context):
     """Retrieves all the activities from a flow.
 
     Args:
@@ -234,9 +287,10 @@ def find_activities(flow):
 
     activities = []
     for module_attribute in dir(flow):
-        instance = getattr(flow, module_attribute)
-        if isinstance(instance, Activity):
-            activities.append(instance)
+        current_activity = getattr(flow, module_attribute)
+        if isinstance(current_activity, Activity):
+            for instance in current_activity.instances(context):
+                activities.append((current_activity, instance))
     return activities
 
 
