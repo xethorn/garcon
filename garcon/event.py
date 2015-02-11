@@ -22,7 +22,7 @@ def activity_states_from_events(events):
     """
 
     events = sorted(events, key=lambda item: item.get('eventId'))
-    event_id_name = dict()
+    event_id_info = dict()
     activity_events = dict()
 
     for event in events:
@@ -31,27 +31,39 @@ def activity_states_from_events(events):
 
         if event_type == 'ActivityTaskScheduled':
             activity_info = event.get('activityTaskScheduledEventAttributes')
+            activity_id = activity_info.get('activityId')
             activity_name = activity_info.get('activityType').get('name')
-            event_id_name.update({
-                event_id: activity_name
+            event_id_info.update({
+                event_id: {
+                    'activity_name': activity_name,
+                    'activity_id': activity_id}
             })
 
             activity_events.setdefault(
-                activity_name, []).append(activity.ACTIVITY_SCHEDULED)
+                activity_name, {}).setdefault(
+                    activity_id, []).append(activity.ACTIVITY_SCHEDULED)
 
         elif event_type == 'ActivityTaskFailed':
             activity_info = event.get('activityTaskFailedEventAttributes')
-            activity_name = event_id_name.get(
+            activity_id = activity_info.get('activityId')
+            activity_event = event_id_info.get(
                 activity_info.get('scheduledEventId'))
+
             activity_events.setdefault(
-                activity_name, []).append(activity.ACTIVITY_FAILED)
+                activity_event.get('activity_name'), {}).setdefault(
+                    activity_event.get('activity_id'), []).append(
+                        activity.ACTIVITY_FAILED)
 
         elif event_type == 'ActivityTaskCompleted':
             activity_info = event.get('activityTaskCompletedEventAttributes')
-            activity_name = event_id_name.get(
+            activity_id = activity_info.get('activityId')
+            activity_event = event_id_info.get(
                 activity_info.get('scheduledEventId'))
+
             activity_events.setdefault(
-                activity_name, []).append(activity.ACTIVITY_COMPLETED)
+                activity_event.get('activity_name'), {}).setdefault(
+                    activity_event.get('activity_id'), []).append(
+                        activity.ACTIVITY_COMPLETED)
 
     return activity_events
 
