@@ -68,7 +68,7 @@ test_activity_4 = create(
 ```
 .
 ├── cli.py # Instantiate the workers
-├── flows # ALl your application flows.
+├── flows # All your application flows.
 │   ├── __init__.py
 │   └── example.py # Should contain a structure similar to the code sample.
 └── tasks
