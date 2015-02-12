@@ -10,6 +10,7 @@ from garcon import activity
 from garcon import event
 from garcon import runner
 from garcon import task
+from garcon import utils
 from tests.fixtures import decider
 
 
@@ -37,6 +38,26 @@ def activity_run(
         fail or MagicMock())
 
     return current_activity
+
+
+@pytest.fixture(params=[0, 1, 2])
+def generators(request):
+    generators = []
+
+    if request.param >= 1:
+        def igenerator(context):
+            for i in range(10):
+                yield {'i': i}
+
+        generators.append(igenerator)
+
+    if request.param == 2:
+        def dgenerator(context):
+            for i in range(10):
+                yield {'d': i * 2}
+        generators.append(dgenerator)
+
+    return generators
 
 
 @pytest.fixture
@@ -107,6 +128,21 @@ def test_task_failure(monkeypatch, poll):
     assert current_activity.fail.called
 
 
+def test_task_failure_on_close_activity(monkeypatch, poll):
+    """Run an activity failure when the task is already closed.
+    """
+
+    resp = dict(foo='bar')
+    mock = MagicMock(return_value=resp)
+    current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
+    current_activity.execute_activity.side_effect = Exception('fail')
+    current_activity.fail.side_effect = Exception('fail')
+    current_activity.unset_log_context = MagicMock()
+    current_activity.run()
+
+    assert current_activity.unset_log_context.called
+
+
 def test_execute_activity(monkeypatch):
     """Test the execution of an activity.
     """
@@ -149,6 +185,32 @@ def test_create_activity_worker(monkeypatch):
 
     assert worker.flow is example
     assert not worker.worker_activities
+
+
+def test_instances_creation(monkeypatch, generators):
+    """Test the creation of an activity instance id with the use of a local
+    context.
+    """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+
+    current_activity = activity.Activity()
+    current_activity.generators = generators
+
+    if len(current_activity.generators):
+        instances = list(current_activity.instances(dict()))
+        assert len(instances) == pow(10, len(generators))
+        for instance in instances:
+            assert isinstance(instance.context.get('i'), int)
+
+            if len(generators) == 2:
+                assert isinstance(instance.context.get('d'), int)
+    else:
+        instances = list(current_activity.instances(dict()))
+        assert len(instances) == 1
+        assert isinstance(instances[0].context, dict)
+        # Context is empty since no generator was used.
+        assert not instances[0].context
 
 
 def test_worker_run(monkeypatch):
@@ -226,48 +288,106 @@ def test_activity_launch_sequence():
     from tests.fixtures.flows import example
 
     # First available activity is the activity_1.
+    context = dict()
     history = event.activity_states_from_events(decider.history['events'][:1])
-    activities = list(activity.find_available_activities(example, history))
-    uncomplete = list(activity.find_uncomplete_activities(example, history))
+    activities = list(
+        activity.find_available_activities(example, history, context))
+    uncomplete = list(
+        activity.find_uncomplete_activities(example, history, context))
     assert len(activities) == 1
     assert len(uncomplete) == 4
-    assert activities[0] == example.activity_1
+    assert activities[0].activity_worker == example.activity_1
 
     # In between activities should not launch activities.
     history = event.activity_states_from_events(decider.history['events'][:5])
-    activities = list(activity.find_available_activities(example, history))
-    uncomplete = list(activity.find_uncomplete_activities(example, history))
+    activities = list(
+        activity.find_available_activities(example, history, context))
+    uncomplete = list(
+        activity.find_uncomplete_activities(example, history, context))
     assert len(activities) == 0
     assert len(uncomplete) == 4
 
     # Two activities are launched in parallel: 2 and 3.
     history = event.activity_states_from_events(decider.history['events'][:7])
-    activities = list(activity.find_available_activities(example, history))
-    uncomplete = list(activity.find_uncomplete_activities(example, history))
+    activities = list(
+        activity.find_available_activities(example, history, context))
+    uncomplete = list(
+        activity.find_uncomplete_activities(example, history, context))
     assert len(activities) == 2
     assert example.activity_1 not in uncomplete
 
     # Activity 3 completes before activity 2. Activity 4 depends on 2 and 3 to
     # complete.
     history = event.activity_states_from_events(decider.history['events'][:14])
-    activities = list(activity.find_available_activities(example, history))
-    uncomplete = list(activity.find_uncomplete_activities(example, history))
+    activities = list(
+        activity.find_available_activities(example, history, context))
+    uncomplete = list(
+        activity.find_uncomplete_activities(example, history, context))
     assert len(activities) == 0
     assert example.activity_3 not in uncomplete
 
     # Activity 2 - 3 completed.
     history = event.activity_states_from_events(decider.history['events'][:22])
-    activities = list(activity.find_available_activities(example, history))
-    uncomplete = list(activity.find_uncomplete_activities(example, history))
+    activities = list(
+        activity.find_available_activities(example, history, context))
+    uncomplete = list(
+        activity.find_uncomplete_activities(example, history, context))
     assert len(activities) == 1
-    assert activities[0] == example.activity_4
+    assert activities[0].activity_worker == example.activity_4
     assert example.activity_1 not in uncomplete
     assert example.activity_2 not in uncomplete
     assert example.activity_3 not in uncomplete
 
     # Close
     history = event.activity_states_from_events(decider.history['events'][:25])
-    activities = list(activity.find_available_activities(example, history))
-    uncomplete = list(activity.find_uncomplete_activities(example, history))
+    activities = list(
+        activity.find_available_activities(example, history, context))
+    uncomplete = list(
+        activity.find_uncomplete_activities(example, history, context))
     assert not activities
     assert not uncomplete
+
+
+def test_create_activity_instance():
+    """Test the creation of an activity instance.
+    """
+
+    activity_mock = MagicMock()
+    activity_mock.name = 'foobar'
+    activity_mock.retry = 20
+
+    instance = activity.ActivityInstance(activity_mock)
+
+    assert activity_mock.name == instance.activity_name
+    assert activity_mock.retry == instance.retry
+
+
+def test_create_activity_instance_id(monkeypatch):
+    """Test the creation of an activity instance id.
+    """
+
+    monkeypatch.setattr(utils, 'create_dictionary_key', MagicMock())
+
+    activity_mock = MagicMock()
+    activity_mock.name = 'activity'
+    instance = activity.ActivityInstance(activity_mock)
+
+    # No context was passed, so create_dictionary key didn't need to be
+    # called.
+    assert instance.id == activity_mock.name + '-1'
+    assert not utils.create_dictionary_key.called
+
+
+def test_create_activity_instance_id_with_local_context(monkeypatch):
+    """Test the creation of an activity instance id with the use of a local
+    context.
+    """
+
+    monkeypatch.setattr(utils, 'create_dictionary_key', MagicMock())
+
+    activity_mock = MagicMock()
+    activity_mock.name = 'activity'
+    instance = activity.ActivityInstance(activity_mock, dict(foobar='yes'))
+
+    assert instance.id.startswith(activity_mock.name)
+    assert utils.create_dictionary_key.called
