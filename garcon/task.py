@@ -137,7 +137,7 @@ def fill_function_call(fn, requirements, activity, context):
     kwargs = dict()
 
     for argument in function_arguments:
-        value = copy.deepcopy(context.get(requirements.get(argument)))
+        value = context.get(requirements.get(argument))
 
         if argument == 'context':
             raise Exception(
