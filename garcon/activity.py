@@ -155,9 +155,9 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             context (dict): The flow context.
         """
 
-        return self.tasks.execute(self, context)
+        return self.runner.execute(self, self.tasks, context)
 
-    def hydrate(self, data):
+    def hydrate(self, **data):
         """Hydrate the task with information provided.
 
         Args:
@@ -170,6 +170,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         self.retry = getattr(self, 'retry', None) or data.get('retry', 0)
         self.task_list = self.task_list or data.get('task_list')
         self.tasks = getattr(self, 'tasks', []) or data.get('tasks')
+        self.runner = getattr(self, 'runner', None) or data.get('runner')
         self.generators = getattr(
             self, 'generators', None) or data.get('generators')
 
@@ -221,7 +222,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             int: Task list timeout.
         """
 
-        return self.tasks.timeout
+        return self.runner.estimate_timeout(self.tasks)
 
 
 class ActivityWorker():
@@ -282,15 +283,15 @@ def create(domain):
 
     def wrapper(**options):
         activity = Activity()
-        activity.hydrate(dict(
+        activity.hydrate(
             domain=domain,
             name=options.get('name'),
             generators=options.get('generators', []),
             requires=options.get('requires', []),
             retry=options.get('retry'),
             task_list=domain + '_' + options.get('name'),
-            tasks=options.get('tasks', [])
-        ))
+            runner=options.get('runner'),
+            tasks=options.get('tasks', []))
         return activity
     return wrapper
 
