@@ -39,7 +39,7 @@ class DeciderWorker(swf.Decider):
         if register:
             self.register()
 
-    def get_history(self, pool):
+    def get_history(self, poll):
         """Get all the history.
 
         The full history needs to be recovered from SWF to make sure that all
@@ -47,39 +47,41 @@ class DeciderWorker(swf.Decider):
         100 events are provided, this methods retrieves all events.
 
         Args:
-            pool (object): The pool object (see AWS SWF for details.)
+            poll (object): The poll object (see AWS SWF for details.)
         Return:
             list: All the events.
         """
 
-        events = pool['events']
-        while 'nextPageToken' in pool:
-            pool = self.poll(next_page_token=pool['nextPageToken'])
+        events = poll['events']
+        while 'nextPageToken' in poll:
+            poll = self.poll(next_page_token=poll['nextPageToken'])
 
-            if 'events' in pool:
-                events += pool['events']
+            if 'events' in poll:
+                events += poll['events']
 
         # Remove all the events that are related to decisions and only.
         return [e for e in events if not e['eventType'].startswith('Decision')]
 
-    def get_workflow_execution_info(self, pool):
-        """Get the workflow execution info from a given pool if it exists.
+    def get_workflow_execution_info(self, poll):
+        """Get the workflow execution info from a given poll if it exists.
 
         Args:
-            pool (object): The pool object (see AWS SWF for details.)
+            poll (object): The poll object (see AWS SWF for details.)
         Return:
             `dict`: Workflow execution info including domain, workflowId and
-            runId.
+                runId.
         """
 
         execution_info = None
-        if 'workflowExecution' in pool and 'workflowId' in \
-                pool['workflowExecution'] and  'runId' in \
-                pool['workflowExecution']:
+        if 'workflowExecution' in poll and 'workflowId' in \
+                poll['workflowExecution'] and  'runId' in \
+                poll['workflowExecution']:
+
+            workflow_execution =  poll['workflowExecution']
             execution_info = {
                 'execution.domain' : self.domain,
-                'execution.workflow_id' : pool['workflowExecution']['workflowId'],
-                'execution.run_id' : pool['workflowExecution']['runId']
+                'execution.workflow_id' : workflow_execution['workflowId'],
+                'execution.run_id' : workflow_execution['runId']
             }
 
         return execution_info
@@ -143,16 +145,20 @@ class DeciderWorker(swf.Decider):
 
         If the decider is not able to find an uncompleted activity, the
         workflow can safely mark its execution as complete.
+
+        Return:
+            boolean: Always return true, so any loop on run can act as a long
+                running process.
         """
 
-        pool = self.poll()
+        poll = self.poll()
 
-        if not 'events' in pool:
-            return
+        if not 'events' in poll:
+            return True
 
-        history = self.get_history(pool)
+        history = self.get_history(poll)
         activity_states = self.get_activity_states(history)
-        workflow_execution_info = self.get_workflow_execution_info(pool)
+        workflow_execution_info = self.get_workflow_execution_info(poll)
         context = event.get_current_context(history)
 
         if workflow_execution_info is not None:
@@ -168,7 +174,7 @@ class DeciderWorker(swf.Decider):
                     context.items() | current.context.items())
 
                 decisions.schedule_activity_task(
-                    current.id, # activity id.
+                    current.id,  # activity id.
                     current.activity_name,
                     self.version,
                     task_list=current.activity_worker.task_list,

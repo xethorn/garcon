@@ -44,12 +44,12 @@ def test_get_workflow_execution_info(monkeypatch):
 
     mock(monkeypatch)
     from tests.fixtures.flows import example
-    from tests.fixtures import decider as pool
+    from tests.fixtures import decider as poll
 
     d = decider.DeciderWorker(example)
 
     # Test extracting workflow execution info
-    assert d.get_workflow_execution_info(pool.history) == {
+    assert d.get_workflow_execution_info(poll.history) == {
         'execution.domain': 'dev',
         'execution.run_id': '123abc=',
         'execution.workflow_id': 'test-workflow-id'}
