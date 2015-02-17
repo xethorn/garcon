@@ -11,29 +11,33 @@ create = activity.create(domain)
 
 activity_1 = create(
     name='activity_1',
-    tasks=runner.Sync(
+    runner=runner.Sync(),
+    tasks=[
         lambda activity, context:
-            print('activity_1')))
+            print('activity_1')])
 
 activity_2 = create(
     name='activity_2',
     requires=[activity_1],
-    tasks=runner.Async(
+    runner=runner.Async(),
+    tasks=[
         lambda activity, context:
             print('activity_2_task_1'),
         lambda activity, context:
-            print('activity_2_task_2')))
+            print('activity_2_task_2')])
 
 activity_3 = create(
     name='activity_3',
     requires=[activity_1],
-    tasks=runner.Sync(
+    runner=runner.Sync(),
+    tasks=[
         lambda activity, context:
-            print('activity_3')))
+            print('activity_3')])
 
 activity_4 = create(
     name='activity_4',
     requires=[activity_3, activity_2],
-    tasks=runner.Sync(
+    runner=runner.Sync(),
+    tasks=[
         lambda activity, context:
-            print('activity_4')))
+            print('activity_4')])

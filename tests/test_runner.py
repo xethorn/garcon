@@ -15,13 +15,11 @@ def test_synchronous_tasks():
     """
 
     resp = dict(foo='bar')
-    current_runner = runner.Sync(
-        MagicMock(), MagicMock(return_value=resp))
-    result = current_runner.execute(None, dict())
+    tasks = [MagicMock(return_value=resp),]
+    current_runner = runner.Sync()
+    result = current_runner.execute(None, tasks, dict())
 
-    assert len(current_runner.tasks) == 2
-
-    for current_task in current_runner.tasks:
+    for current_task in tasks:
         assert current_task.called
 
     assert resp == result
@@ -39,13 +37,12 @@ def test_aynchronous_tasks():
         list(tasks[4].return_value.items()))
 
     workers = 2
-    current_runner = runner.Async(*tasks, max_workers=workers)
+    current_runner = runner.Async(max_workers=workers)
 
     assert current_runner.max_workers == workers
-    assert len(current_runner.tasks) == len(tasks)
 
     context = dict(hello='world')
-    resp = current_runner.execute(None, context)
+    resp = current_runner.execute(None, tasks, context)
 
     for current_task in tasks:
         assert current_task.called
@@ -57,16 +54,19 @@ def test_calculate_timeout_with_no_tasks():
     """Task list without task has no timeout.
     """
 
-    task_list = runner.BaseRunner()
-    assert task_list.timeout == '0'
+    tasks = []
+    current_runner = runner.BaseRunner()
+    assert current_runner.estimate_timeout(tasks) == '0'
 
 
 def test_calculate_default_timeout():
     """Tasks that do not have a set timeout get the default timeout.
     """
 
-    task_list = runner.BaseRunner(lambda x: x)
-    assert task_list.timeout == str(runner.DEFAULT_TASK_TIMEOUT)
+    current_runner = runner.BaseRunner()
+    tasks = [lambda x: x]
+    estimate_timeout = current_runner.estimate_timeout(tasks)
+    assert estimate_timeout == str(runner.DEFAULT_TASK_TIMEOUT)
 
 
 def test_calculate_timeout():
@@ -79,11 +79,13 @@ def test_calculate_timeout():
     def task_a():
         pass
 
-    current_runner = runner.BaseRunner(task_a)
-    assert current_runner.timeout == str(timeout)
+    current_runner = runner.BaseRunner()
+    assert current_runner.estimate_timeout([task_a]) == str(timeout)
 
     def task_b():
         pass
 
-    current_runner = runner.BaseRunner(task_a, task_b)
-    assert current_runner.timeout == str(timeout + runner.DEFAULT_TASK_TIMEOUT)
+    current_runner = runner.BaseRunner()
+    tasks = [task_a, task_b]
+    estimate_timeout = current_runner.estimate_timeout(tasks)
+    assert estimate_timeout == str(timeout + runner.DEFAULT_TASK_TIMEOUT)

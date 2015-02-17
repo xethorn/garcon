@@ -152,7 +152,8 @@ def test_execute_activity(monkeypatch):
     custom_task = MagicMock(return_value=resp)
 
     current_activity = activity.Activity()
-    current_activity.tasks = runner.Sync(custom_task)
+    current_activity.runner = runner.Sync()
+    current_activity.tasks = [custom_task]
 
     val = current_activity.execute_activity(dict(foo='bar'))
 
@@ -166,11 +167,11 @@ def test_hydrate_activity(monkeypatch):
 
     monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
     current_activity = activity.Activity()
-    current_activity.hydrate(dict(
+    current_activity.hydrate(
         name='activity',
         domain='domain',
         requires=[],
-        tasks=[lambda: dict('val')]))
+        tasks=[lambda: dict('val')])
 
 
 def test_create_activity_worker(monkeypatch):
