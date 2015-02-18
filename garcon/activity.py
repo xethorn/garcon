@@ -22,8 +22,8 @@ Create an activity::
         # Name of your activity
         name='activity_name',
 
-        # List of tasks (here we use the Sync runner)
-        tasks=runner.Sync(task1),
+        # List of tasks to run (here we use the Sync runner)
+        run=runner.Sync(task1),
 
         # No requires since it's the first one. Later in your flow, if you have
         # a dependency, just use the variable that contains the activity.
@@ -149,13 +149,13 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         return True
 
     def execute_activity(self, context):
-        """Execute the tasks within the activity.
+        """Execute the runner.
 
         Args:
             context (dict): The flow context.
         """
 
-        return self.tasks.execute(self, context)
+        return self.runner.execute(self, context)
 
     def hydrate(self, data):
         """Hydrate the task with information provided.
@@ -169,7 +169,13 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         self.requires = getattr(self, 'requires', []) or data.get('requires')
         self.retry = getattr(self, 'retry', None) or data.get('retry', 0)
         self.task_list = self.task_list or data.get('task_list')
-        self.tasks = getattr(self, 'tasks', []) or data.get('tasks')
+
+        # The previous way to create an activity was to fill a `tasks` param,
+        # which is not `run`.
+        self.runner = (
+            getattr(self, 'runner', None) or
+                data.get('run') or data.get('tasks'))
+
         self.generators = getattr(
             self, 'generators', None) or data.get('generators')
 
@@ -221,7 +227,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             int: Task list timeout.
         """
 
-        return self.tasks.timeout
+        return self.runner.timeout
 
 
 class ActivityWorker():
@@ -289,7 +295,8 @@ def create(domain):
             requires=options.get('requires', []),
             retry=options.get('retry'),
             task_list=domain + '_' + options.get('name'),
-            tasks=options.get('tasks', [])
+            tasks=options.get('tasks'),
+            run=options.get('run'),
         ))
         return activity
     return wrapper

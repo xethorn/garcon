@@ -152,7 +152,7 @@ def test_execute_activity(monkeypatch):
     custom_task = MagicMock(return_value=resp)
 
     current_activity = activity.Activity()
-    current_activity.tasks = runner.Sync(custom_task)
+    current_activity.runner = runner.Sync(custom_task)
 
     val = current_activity.execute_activity(dict(foo='bar'))
 
