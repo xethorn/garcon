@@ -44,6 +44,7 @@ import json
 
 from garcon import log
 from garcon import utils
+from garcon import runner
 
 
 ACTIVITY_STANDBY = 0
@@ -110,6 +111,37 @@ class ActivityInstance:
         return '{name}-{id}'.format(
             name=self.activity_name,
             id=activity_id)
+
+    def create_execution_input(self, context):
+        """Create the input of the activity from the context.
+
+        AWS has a limit on the number of characters that can be used (32k). If
+        you use the `task.decorate`, the data sent to the activity is optimized
+        to match the values of the context.
+
+        Args:
+            context (dict): the current execution context (which is different
+                from the activity context.)
+
+        Return:
+            dict: the input to send to the activity.
+        """
+
+        activity_input = dict()
+        context = dict(list(context.items()) + list(self.context.items()))
+
+        try:
+            if not getattr(self.activity_worker, 'runner', None):
+                raise runner.NoRunnerRequirementsFound()
+
+            for requirement in self.activity_worker.runner.requirements:
+                value = context.get(requirement)
+                if value:
+                    activity_input.update({requirement: value})
+
+        except runner.NoRunnerRequirementsFound:
+            return context
+        return activity_input
 
 
 class Activity(swf.ActivityWorker, log.GarconLogger):

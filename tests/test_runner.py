@@ -10,6 +10,16 @@ from garcon import runner
 from garcon import task
 
 
+def test_execute_default_task_runner():
+    """Should throw an exception.
+    """
+
+    current_runner = runner.BaseRunner()
+    with pytest.raises(NotImplementedError):
+        current_runner.execute(None, None)
+        assert False
+
+
 def test_synchronous_tasks():
     """Test synchronous tasks.
     """
@@ -87,3 +97,30 @@ def test_calculate_timeout():
 
     current_runner = runner.BaseRunner(task_a, task_b)
     assert current_runner.timeout == str(timeout + runner.DEFAULT_TASK_TIMEOUT)
+
+
+def test_runner_requirements():
+    """Test the requirements for the runner
+    """
+
+    @task.decorate()
+    def task_a():
+        pass
+
+    value = 'context.value'
+    current_runner = runner.BaseRunner(task_a.fill(foo=value))
+    assert value in current_runner.requirements
+
+
+def test_runner_requirements_without_decoration():
+    """Should just throw an exception.
+    """
+
+    def task_a():
+        pass
+
+    current_runner = runner.BaseRunner(task_a)
+
+    with pytest.raises(runner.NoRunnerRequirementsFound):
+        current_runner.requirements
+        assert False

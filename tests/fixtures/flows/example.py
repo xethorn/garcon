@@ -1,8 +1,6 @@
 from __future__ import print_function
-import boto.swf.layer2 as swf
 
 from garcon import activity
-from garcon import task
 from garcon import runner
 
 
