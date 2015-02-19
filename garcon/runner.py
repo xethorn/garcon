@@ -13,6 +13,10 @@ from concurrent.futures import ThreadPoolExecutor
 DEFAULT_TASK_TIMEOUT = 600  # 10 minutes.
 
 
+class NoRunnerRequirementsFound(Exception):
+    pass
+
+
 class BaseRunner():
 
     def __init__(self, *args):
@@ -45,11 +49,38 @@ class BaseRunner():
 
         return str(timeout)
 
+    @property
+    def requirements(self):
+        """Find all the requirements from the list of tasks and return it.
+
+        If a task does not use the `task.decorate`, no assumptions can be made
+        on which values from the context will be used, and it will raise an
+        exception.
+
+        Raise:
+            NoRequirementFound: The exception when no requirements have been
+                mentioned in at least one or more tasks.
+
+        Return:
+            set: the list of the required values from the context.
+        """
+
+        requirements = []
+
+        for task in self.tasks:
+            task_details = getattr(task, '__garcon__', None)
+            if task_details:
+                requirements += task_details.get('requirements', [])
+            else:
+                raise NoRunnerRequirementsFound()
+
+        return set(requirements)
+
     def execute(self, activity, context):
         """Execution of the tasks.
         """
 
-        return NotImplementedError
+        raise NotImplementedError
 
 
 class Sync(BaseRunner):

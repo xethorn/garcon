@@ -1,5 +1,4 @@
 import logging
-import pytest
 
 from garcon import log
 from tests.fixtures import log as fixture

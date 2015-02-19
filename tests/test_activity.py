@@ -391,3 +391,57 @@ def test_create_activity_instance_id_with_local_context(monkeypatch):
 
     assert instance.id.startswith(activity_mock.name)
     assert utils.create_dictionary_key.called
+
+
+def test_create_activity_instance_input_without_runner(monkeypatch):
+    """Test the creation of a context for an activity instance input without
+    specifying a runner.
+    """
+
+    activity_mock = MagicMock()
+    activity_mock.name = 'activity'
+    activity_mock.runner = None
+    context = dict(context='yes')
+    instance = activity.ActivityInstance(activity_mock, context)
+    resp = instance.create_execution_input(dict())
+
+    assert len(resp) == 1
+    assert resp.get('context') == 'yes'
+
+
+def test_create_activity_instance_input(monkeypatch):
+    """Test the creation of a context for an activity instance input.
+    """
+
+    @task.decorate()
+    def task_a(value):
+        pass
+
+    activity_mock = MagicMock()
+    activity_mock.name = 'activity'
+    activity_mock.runner = runner.BaseRunner(task_a.fill(value='context'))
+    instance = activity.ActivityInstance(activity_mock, dict(context='yes'))
+    resp = instance.create_execution_input(dict(somemore='values'))
+
+    assert len(resp) == 1
+    assert resp.get('context') == 'yes'
+
+
+def test_create_activity_instance_input_without_decorate(monkeypatch):
+    """Test the creation of a context input without the use of a decorator.
+    """
+
+    def task_a(value):
+        pass
+
+    activity_mock = MagicMock()
+    activity_mock.name = 'activity'
+    context = dict(foo='bar')
+    local_context = dict(context='yes')
+
+    activity_mock.runner = runner.BaseRunner(task_a)
+    instance = activity.ActivityInstance(activity_mock, local_context)
+
+    resp = instance.create_execution_input(context)
+    assert resp.get('foo') == 'bar'
+    assert resp.get('context') == 'yes'

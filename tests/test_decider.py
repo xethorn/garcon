@@ -4,10 +4,7 @@ try:
 except:
     from mock import MagicMock
 import boto.swf.layer2 as swf
-from boto.swf import layer1
-import pytest
 
-from garcon import activity
 from garcon import decider
 
 
