@@ -360,17 +360,21 @@ def find_available_activities(flow, history, context):
                 raise Exception(
                     'The activity failures has exceeded its retry limit.')
 
+        can_yield = True
         for requirement in instance.activity_worker.requires:
             require_history = history.get(requirement.name)
 
             if not require_history:
-                return
+                can_yield = False
+                break
 
             for requirement_evt in require_history.values():
                 if not ACTIVITY_COMPLETED in requirement_evt:
-                    return
+                    can_yield = False
+                    break
 
-        yield instance
+        if can_yield:
+            yield instance
 
 
 def find_uncomplete_activities(flow, history, context):
