@@ -5,7 +5,8 @@ from garcon import runner
 
 
 domain = 'dev'
-create = activity.create(domain)
+name = 'workflow_name'
+create = activity.create(domain, name)
 
 activity_1 = create(
     name='activity_1',

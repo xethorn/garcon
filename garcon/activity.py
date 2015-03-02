@@ -306,7 +306,7 @@ def worker_runner(worker):
         continue
 
 
-def create(domain):
+def create(domain, name):
     """Helper method to create Activities.
 
     The helper method simplifies the creation of an activity by setting the
@@ -320,13 +320,17 @@ def create(domain):
 
     def wrapper(**options):
         activity = Activity()
+        activity_name = '{name}_{activity}'.format(
+            name=name,
+            activity=options.get('name'))
+
         activity.hydrate(dict(
             domain=domain,
-            name=options.get('name'),
+            name=activity_name,
             generators=options.get('generators', []),
             requires=options.get('requires', []),
             retry=options.get('retry'),
-            task_list=domain + '_' + options.get('name'),
+            task_list=activity_name,
             tasks=options.get('tasks'),
             run=options.get('run'),
         ))

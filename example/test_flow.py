@@ -9,7 +9,8 @@ import random
 logger = logging.getLogger(__name__)
 
 domain = 'dev'
-create = activity.create(domain)
+name = 'workflow_sample'
+create = activity.create(domain, name)
 
 
 def activity_failure(context, activity):
