@@ -9,8 +9,8 @@ import test_flow
 deciderworker = decider.DeciderWorker(test_flow)
 
 swf.WorkflowType(
-    name=test_flow.domain + '_decider', domain=test_flow.domain,
-    version='1.0', task_list=test_flow.domain + '_decider').start()
+    name=test_flow.name, domain=test_flow.domain,
+    version='1.0', task_list=test_flow.name).start()
 
 Thread(target=activity.ActivityWorker(test_flow).run).start()
 while(True):
