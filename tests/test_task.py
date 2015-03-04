@@ -41,6 +41,43 @@ def test_decorator():
     assert test.__garcon__.get('foo') is 'bar'
 
 
+def test_link_decorator():
+    """Test linking the decorator between two methods.
+    """
+
+    def testA():
+        pass
+
+    def testB():
+        pass
+
+    task._decorate(testA, 'foo', 'value')
+    task._link_decorator(testA, testB)
+    assert testA.__garcon__ is testB.__garcon__
+    assert testA.__garcon__.get('foo') == 'value'
+    assert testB.__garcon__.get('foo') == 'value'
+
+
+def test_link_decorator_with_empty_source():
+    """Test linking decorators when garcon is not set on the source.
+    """
+
+    def testA():
+        pass
+
+    def testB():
+        pass
+
+    task._link_decorator(testA, testB)
+    assert testA.__garcon__ is testB.__garcon__
+    assert len(testA.__garcon__) is 0
+    assert len(testB.__garcon__) is 0
+
+    task._decorate(testB, 'foo', 'value')
+    task._link_decorator(testA, testB)
+    assert testA.__garcon__.get('foo') == 'value'
+
+
 def test_task_decorator():
     """Test the task decorator.
     """

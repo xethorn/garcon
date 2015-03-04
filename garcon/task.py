@@ -73,6 +73,26 @@ def _decorate(fn, key=None, value=None):
         })
 
 
+def _link_decorator(source_fn, dest_fn):
+    """Link the garcon decorator values between two methods.
+
+    If the destination method already have a value on `__garcon__`, we get it
+    and merge it with the other one (so no values are lost.)
+
+    Args:
+        source_fn (callable): The method that contains `__garcon__`.
+        dest_fn (callable): The method that receives the decorator.
+    """
+
+    source_values = getattr(source_fn, '__garcon__', dict())
+
+    if hasattr(dest_fn, '__garcon__'):
+        source_values.update(dest_fn.__garcon__)
+
+    setattr(dest_fn, '__garcon__', source_values)
+    setattr(source_fn, '__garcon__', source_values)
+
+
 def contextify(fn):
     """Decorator to take values from the context and apply them to fn.
 
@@ -115,6 +135,7 @@ def contextify(fn):
 
         # Keep a record of the requirements value. This allows us to trim the
         # size of the context sent to the activity as an input.
+        _link_decorator(fn, wrapper)
         _decorate(wrapper, 'requirements', requirements.values())
         return wrapper
 
