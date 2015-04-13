@@ -3,7 +3,7 @@ Task runners
 ============
 
 The task runners are responsible for running all the tasks (either in series
-or in parallel). There's only one task runner per activity. The base is
+or in parallel). There's only one task runner per activity.
 """
 
 from concurrent import futures
@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 DEFAULT_TASK_TIMEOUT = 600  # 10 minutes.
+DEFAULT_TASK_HEARTBEAT = 600 # 10 minutes
 
 
 class NoRunnerRequirementsFound(Exception):
@@ -50,6 +51,37 @@ class BaseRunner():
         return str(timeout)
 
     @property
+    def heartbeat(self):
+        """Calculate and return the heartbeat for an activity.
+
+        The heartbeat represents when an actvitity should be sending a signal
+        to SWF that it has not completed yet. The heartbeat is sent everytime
+        a new task is going to be launched.
+
+        Similar to the `BaseRunner.timeout`, the heartbeat is pessimistic, it
+        looks at the largest heartbeat and set it up.
+
+        Return:
+            str: The heartbeat timeout (boto requires the timeout to be a string
+                not a regular number.)
+        """
+
+        heartbeat = 0
+
+        for task in self.tasks:
+            task_details = getattr(task, '__garcon__', None)
+            task_heartbeat = DEFAULT_TASK_HEARTBEAT
+
+            if task_details:
+                task_heartbeat = task_details.get(
+                    'heartbeat', DEFAULT_TASK_HEARTBEAT)
+
+            if task_heartbeat > heartbeat:
+                heartbeat = task_heartbeat
+
+        return str(heartbeat)
+
+    @property
     def requirements(self):
         """Find all the requirements from the list of tasks and return it.
 
@@ -73,7 +105,6 @@ class BaseRunner():
                 requirements += task_details.get('requirements', [])
             else:
                 raise NoRunnerRequirementsFound()
-
         return set(requirements)
 
     def execute(self, activity, context):
@@ -88,6 +119,7 @@ class Sync(BaseRunner):
     def execute(self, activity, context):
         result = dict()
         for task in self.tasks:
+            activity.heartbeat()
             task_context = dict(list(result.items()) + list(context.items()))
             resp = task(task_context, activity=activity)
             result.update(resp or dict())
@@ -108,6 +140,7 @@ class Async(BaseRunner):
                 tasks.append(executor.submit(task, context, activity=activity))
 
             for future in futures.as_completed(tasks):
+                activity.heartbeat()
                 data = future.result()
                 result.update(data or {})
         return result
