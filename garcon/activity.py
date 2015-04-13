@@ -261,6 +261,20 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
 
         return self.runner.timeout
 
+    @property
+    def heartbeat_timeout(self):
+        """Return the heartbeat in seconds.
+
+        This heartbeat corresponds on when an activity needs to send a signal
+        to swf that it is still running. This will set the value when the
+        activity is scheduled.
+
+        Return:
+            int: Task list timeout.
+        """
+
+        return self.runner.heartbeat
+
 
 class ActivityWorker():
 

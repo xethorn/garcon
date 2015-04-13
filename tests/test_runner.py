@@ -6,6 +6,7 @@ except:
 
 import pytest
 
+from garcon import activity
 from garcon import runner
 from garcon import task
 
@@ -20,14 +21,20 @@ def test_execute_default_task_runner():
         assert False
 
 
-def test_synchronous_tasks():
+def test_synchronous_tasks(monkeypatch):
     """Test synchronous tasks.
     """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    monkeypatch.setattr(activity.Activity, 'heartbeat', lambda self: None)
 
     resp = dict(foo='bar')
     current_runner = runner.Sync(
         MagicMock(), MagicMock(return_value=resp))
-    result = current_runner.execute(None, dict())
+    current_activity = activity.Activity()
+    current_activity.hydrate(dict(runner=current_runner))
+
+    result = current_runner.execute(current_activity, dict())
 
     assert len(current_runner.tasks) == 2
 
@@ -37,9 +44,12 @@ def test_synchronous_tasks():
     assert resp == result
 
 
-def test_aynchronous_tasks():
+def test_aynchronous_tasks(monkeypatch):
     """Test asynchronous tasks.
     """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    monkeypatch.setattr(activity.Activity, 'heartbeat', lambda self: None)
 
     tasks = [MagicMock() for i in range(5)]
     tasks[2].return_value = dict(oi='mondo')
@@ -54,8 +64,11 @@ def test_aynchronous_tasks():
     assert current_runner.max_workers == workers
     assert len(current_runner.tasks) == len(tasks)
 
+    current_activity = activity.Activity()
+    current_activity.hydrate(dict(runner=current_runner))
+
     context = dict(hello='world')
-    resp = current_runner.execute(None, context)
+    resp = current_runner.execute(current_activity, context)
 
     for current_task in tasks:
         assert current_task.called
@@ -71,12 +84,28 @@ def test_calculate_timeout_with_no_tasks():
     assert task_list.timeout == '0'
 
 
+def test_calculate_heartbeat_with_no_tasks():
+    """Task list without tasks has no heartbeat.
+    """
+
+    task_list = runner.BaseRunner()
+    assert task_list.heartbeat == '0'
+
+
 def test_calculate_default_timeout():
     """Tasks that do not have a set timeout get the default timeout.
     """
 
     task_list = runner.BaseRunner(lambda x: x)
     assert task_list.timeout == str(runner.DEFAULT_TASK_TIMEOUT)
+
+
+def test_calculate_default_heartbeat():
+    """Tasks that do not have a set timeout get the default timeout.
+    """
+
+    task_list = runner.BaseRunner(lambda x: x)
+    assert task_list.heartbeat == str(runner.DEFAULT_TASK_HEARTBEAT)
 
 
 def test_calculate_timeout():
@@ -104,6 +133,37 @@ def test_calculate_timeout():
 
     current_runner = runner.BaseRunner(task_a, task_c)
     assert current_runner.timeout == str(timeout + runner.DEFAULT_TASK_TIMEOUT)
+
+
+def test_calculate_heartbeat():
+    """Check methods that have set timeout.
+    """
+
+    @task.decorate(heartbeat=5)
+    def task_a():
+        pass
+
+    current_runner = runner.BaseRunner(task_a)
+    assert current_runner.heartbeat == str(5)
+
+    @task.decorate(heartbeat=3)
+    def task_b():
+        pass
+
+    current_runner = runner.BaseRunner(task_b)
+    assert current_runner.heartbeat == str(3)
+
+    @task.decorate(heartbeat=4498)
+    def task_c():
+        pass
+
+    def task_d():
+        pass
+
+    current_runner = runner.BaseRunner(
+        task_a, task_b, task_c, task_d)
+    assert current_runner.heartbeat == str(4498)
+
 
 
 def test_runner_requirements():

@@ -148,6 +148,8 @@ def test_execute_activity(monkeypatch):
     """
 
     monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    monkeypatch.setattr(activity.Activity, 'heartbeat', lambda self: None)
+
     resp = dict(task_resp='something')
     custom_task = MagicMock(return_value=resp)
 

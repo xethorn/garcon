@@ -21,6 +21,21 @@ def test_timeout_decorator():
     assert test.__garcon__.get('timeout') == timeout
 
 
+def test_timeout_decorator_with_heartbeat():
+    """Test the timeout decorator with heartbeat.
+    """
+
+    timeout = 20
+    heartbeat = 30
+
+    @task.timeout(timeout, heartbeat=heartbeat)
+    def test():
+        pass
+
+    assert test.__garcon__.get('heartbeat') == heartbeat
+    assert test.__garcon__.get('timeout') == timeout
+
+
 def test_decorator():
     """Test the Decorator.
 
@@ -88,10 +103,24 @@ def test_task_decorator():
         assert user is userinfo
 
     assert test.__garcon__.get('timeout') == timeout
+    assert test.__garcon__.get('heartbeat') == timeout
     assert callable(test.fill)
 
     call = test.fill(user='user')
     call(dict(user='something'))
+
+
+def test_task_decorator_with_heartbeat():
+    """Test the task decorator with heartbeat.
+    """
+
+    heartbeat = 50
+
+    @task.decorate(heartbeat=heartbeat)
+    def test(user):
+        assert user is userinfo
+
+    assert test.__garcon__.get('heartbeat') == heartbeat
 
 
 def test_task_decorator_with_activity():

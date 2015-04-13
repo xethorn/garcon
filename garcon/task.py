@@ -20,13 +20,13 @@ Note:
 import copy
 
 
-def decorate(timeout=None, enable_contextify=True):
+def decorate(timeout=None, heartbeat=None, enable_contextify=True):
     """Generic task decorator for tasks.
 
     Args:
         timeout (int): The timeout of the task (see timeout).
+        heartbeat (int): The heartbeat timeout.
         contextify (boolean): If the task can be contextified (see contextify).
-
     Return:
         callable: The wrapper.
     """
@@ -35,23 +35,31 @@ def decorate(timeout=None, enable_contextify=True):
         if timeout:
             _decorate(fn, 'timeout', timeout)
 
+        # If the task does not have a heartbeat, but instead the task has
+        # a timeout, the heartbeat should be adjusted to the timeout. In
+        # most case, most people will probably opt for this option.
+        if heartbeat or timeout:
+            _decorate(fn, 'heartbeat', heartbeat or timeout)
+
         if enable_contextify:
             contextify(fn)
-
         return fn
 
     return wrapper
 
 
-def timeout(time):
+def timeout(time, heartbeat=None):
     """Wrapper for a task to define its timeout.
 
     Args:
         time (int): the timeout in seconds
+        heartbeat (int): the heartbeat timeout (in seconds too.)
     """
 
     def wrapper(fn):
         _decorate(fn, 'timeout', time)
+        if heartbeat:
+            _decorate(fn, 'heartbeat', heartbeat)
         return fn
 
     return wrapper
