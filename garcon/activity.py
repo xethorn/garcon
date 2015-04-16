@@ -33,7 +33,7 @@ Create an activity::
         retry=0,
 
         # If you want to run the activity `n` times, you can use a generator.
-        generator=[generator_name])
+        generators=[generator_name])
 
 """
 
