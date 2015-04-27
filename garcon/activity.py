@@ -52,6 +52,8 @@ ACTIVITY_SCHEDULED = 1
 ACTIVITY_COMPLETED = 2
 ACTIVITY_FAILED = 3
 
+DEFAULT_ACTIVITY_SCHEDULE_TO_START = 600  # 10 minutes
+
 
 class ActivityInstance:
 
@@ -196,11 +198,19 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             data (dict): the data to use (if defined.)
         """
 
+        self.pool_size = 0
         self.name = self.name or data.get('name')
         self.domain = getattr(self, 'domain', '') or data.get('domain')
         self.requires = getattr(self, 'requires', []) or data.get('requires')
         self.retry = getattr(self, 'retry', None) or data.get('retry', 0)
         self.task_list = self.task_list or data.get('task_list')
+
+        # The start timeout is how long it will take between the scheduling
+        # of the activity and the start of the activity.
+        self.schedule_to_start_timeout = (
+            getattr(self, 'schedule_to_start_timeout', None) or
+            data.get('schedule_to_start') or
+            DEFAULT_ACTIVITY_SCHEDULE_TO_START)
 
         # The previous way to create an activity was to fill a `tasks` param,
         # which is not `run`.
@@ -230,6 +240,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         """
 
         if not self.generators:
+            self.pool_size = 1
             yield ActivityInstance(self)
             return
 
@@ -237,7 +248,9 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         for generator in self.generators:
             generator_values.append(generator(context))
 
-        for generator_contexts in itertools.product(*generator_values):
+        contexts = list(itertools.product(*generator_values))
+        self.pool_size = len(contexts)
+        for generator_contexts in contexts:
             # Each generator returns a context, merge all the contexts
             # to only be one - which can be used to 1/ create the id of the
             # activity and 2/ be passed as a local context.
@@ -245,7 +258,38 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             for current_generator_context in generator_contexts:
                 instance_context.update(current_generator_context.items())
 
-            yield ActivityInstance(self, context=instance_context)
+            yield ActivityInstance(
+                self, context=instance_context)
+
+    @property
+    def schedule_to_start(self):
+        """Return the schedule to start timeout.
+
+        The schedule to start timeout assumes that only one activity worker is
+        available (since swf does not provide a count of available workers). So
+        if the default value is 5 minutes, and you have 10 instances: the
+        schedule to start will be 50 minutes for all instances.
+
+        Return:
+            int: Schedule to start timeout.
+        """
+
+        return self.pool_size * self.schedule_to_start_timeout
+
+    @property
+    def schedule_to_close(self):
+        """Return the schedule to close timeout.
+
+        The schedule to close timeout is a simple calculation that defines when
+        an activity (from the moment it has been scheduled) should end. It is
+        a calculation between the schedule to start timeout and the activity
+        timeout.
+
+        Return:
+            int: Schedule to close timeout.
+        """
+
+        return self.schedule_to_start + int(self.timeout)
 
     @property
     def timeout(self):
@@ -347,7 +391,7 @@ def create(domain, name):
             task_list=activity_name,
             tasks=options.get('tasks'),
             run=options.get('run'),
-        ))
+            schedule_to_start=options.get('schedule_to_start')))
         return activity
     return wrapper
 

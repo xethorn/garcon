@@ -215,6 +215,40 @@ def test_instances_creation(monkeypatch, generators):
         assert not instances[0].context
 
 
+def test_activity_timeouts(monkeypatch, generators):
+    """Test the creation of an activity timeouts.
+
+    More details: the timeout of a task is 120s, the schedule to start is 1000,
+    100 activities are going to be scheduled when the generator is set. The
+    schedule_to_start for all activities instance is: 10000 * 100 = 100k. The
+    schedule to close is 100k + duration of an activity (which is 120s * 2).
+    """
+
+    timeout = 120
+    start_timeout = 1000
+
+    @task.decorate(timeout=timeout)
+    def local_task():
+        return
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    current_activity = activity.Activity()
+    current_activity.hydrate(dict(schedule_to_start=start_timeout))
+    current_activity.generators = generators
+    current_activity.runner = runner.Sync(
+        local_task.fill(),
+        local_task.fill())
+
+    total_generators = pow(10, len(current_activity.generators))
+    schedule_to_start = start_timeout * total_generators
+    for instance in current_activity.instances({}):
+        assert current_activity.pool_size == total_generators
+        assert current_activity.schedule_to_start == schedule_to_start
+        assert current_activity.timeout == str(timeout * 2)
+        assert current_activity.schedule_to_close == (
+            schedule_to_start + int(current_activity.timeout))
+
+
 def test_worker_run(monkeypatch):
     """Test running the worker.
     """
