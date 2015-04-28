@@ -114,6 +114,84 @@ class ActivityInstance:
             name=self.activity_name,
             id=activity_id)
 
+    @property
+    def schedule_to_start(self):
+        """Return the schedule to start timeout.
+
+        The schedule to start timeout assumes that only one activity worker is
+        available (since swf does not provide a count of available workers). So
+        if the default value is 5 minutes, and you have 10 instances: the
+        schedule to start will be 50 minutes for all instances.
+
+        Return:
+            int: Schedule to start timeout.
+        """
+
+        return (
+            self.activity_worker.pool_size *
+                self.activity_worker.schedule_to_start_timeout)
+
+    @property
+    def schedule_to_close(self):
+        """Return the schedule to close timeout.
+
+        The schedule to close timeout is a simple calculation that defines when
+        an activity (from the moment it has been scheduled) should end. It is
+        a calculation between the schedule to start timeout and the activity
+        timeout.
+
+        Return:
+            int: Schedule to close timeout.
+        """
+
+        return self.schedule_to_start + self.timeout
+
+    @property
+    def timeout(self):
+        """Return the timeout in seconds.
+
+        This timeout corresponds on when the activity has started and when we
+        assume the activity has ended (which corresponds in boto to
+        start_to_close_timeout.)
+
+        Return:
+            int: Task list timeout.
+        """
+
+        return self.runner.timeout(self.context)
+
+    @property
+    def heartbeat_timeout(self):
+        """Return the heartbeat in seconds.
+
+        This heartbeat corresponds on when an activity needs to send a signal
+        to swf that it is still running. This will set the value when the
+        activity is scheduled.
+
+        Return:
+            int: Task list timeout.
+        """
+
+        return self.runner.heartbeat(self.context)
+
+    @property
+    def runner(self):
+        """Shortcut to get access to the runner.
+
+        Raises:
+            runner.RunnerMissing: an activity should always have a runner,
+                if the runner is missing an exception is raised (we will not
+                be able to calculate values such as timeouts without a runner.)
+
+        Return:
+            Runner: the activity runner.
+        """
+
+        activity_runner = getattr(self.activity_worker, 'runner', None)
+        if not activity_runner:
+            raise runner.RunnerMissing()
+        return activity_runner
+
     def create_execution_input(self, context):
         """Create the input of the activity from the context.
 
@@ -133,10 +211,7 @@ class ActivityInstance:
         context = dict(list(context.items()) + list(self.context.items()))
 
         try:
-            if not getattr(self.activity_worker, 'runner', None):
-                raise runner.NoRunnerRequirementsFound()
-
-            for requirement in self.activity_worker.runner.requirements:
+            for requirement in self.runner.requirements(self.context):
                 value = context.get(requirement)
                 if value:
                     activity_input.update({requirement: value})
@@ -260,64 +335,6 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
 
             yield ActivityInstance(
                 self, context=instance_context)
-
-    @property
-    def schedule_to_start(self):
-        """Return the schedule to start timeout.
-
-        The schedule to start timeout assumes that only one activity worker is
-        available (since swf does not provide a count of available workers). So
-        if the default value is 5 minutes, and you have 10 instances: the
-        schedule to start will be 50 minutes for all instances.
-
-        Return:
-            int: Schedule to start timeout.
-        """
-
-        return self.pool_size * self.schedule_to_start_timeout
-
-    @property
-    def schedule_to_close(self):
-        """Return the schedule to close timeout.
-
-        The schedule to close timeout is a simple calculation that defines when
-        an activity (from the moment it has been scheduled) should end. It is
-        a calculation between the schedule to start timeout and the activity
-        timeout.
-
-        Return:
-            int: Schedule to close timeout.
-        """
-
-        return self.schedule_to_start + self.timeout
-
-    @property
-    def timeout(self):
-        """Return the timeout in seconds.
-
-        This timeout corresponds on when the activity has started and when we
-        assume the activity has ended (which corresponds in boto to
-        start_to_close_timeout.)
-
-        Return:
-            int: Task list timeout.
-        """
-
-        return self.runner.timeout
-
-    @property
-    def heartbeat_timeout(self):
-        """Return the heartbeat in seconds.
-
-        This heartbeat corresponds on when an activity needs to send a signal
-        to swf that it is still running. This will set the value when the
-        activity is scheduled.
-
-        Return:
-            int: Task list timeout.
-        """
-
-        return self.runner.heartbeat
 
 
 class ActivityWorker():

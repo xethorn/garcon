@@ -65,6 +65,41 @@ def timeout(time, heartbeat=None):
     return wrapper
 
 
+def list(fn):
+    """Wrapper for a callable to define a task generator.
+
+    Generators are used to check values in the context and schedule different
+    tasks based on it. Note: depending on the tasks returned by the generator,
+    the timout values will be calculated differently.
+
+    For instance:
+
+        @task.list
+        def create_client(context):
+            yield create_user.fill(
+                username='context.username',
+                email='context.email')
+            if context.get('context.credit_card'):
+                yield create_credit_card.fill(
+                    username='context.username',
+                    credit_card='context.credit_card')
+            yield send_email.fill(email='context.email')
+    """
+
+    _decorate(fn, key='list', value=True)
+    return fn
+
+
+def is_task_list(fn):
+    """Check if a function is a task list.
+
+    Return:
+        boolean: if a function is a task list.
+    """
+
+    return getattr(fn, '__garcon__', {}).get('list')
+
+
 def _decorate(fn, key=None, value=None):
     """Add the garcon property to the function.
 
@@ -150,6 +185,28 @@ def contextify(fn):
 
     fn.fill = fill
     return fn
+
+
+def flatten(callables, context=None):
+    """Flatten the tasks.
+
+    The task list is a mix of tasks and generators. The task generators are
+    consuming the context and spawning new tasks. This method flattens
+    everything into one list.
+
+    Args:
+        callables (list): list of callables (including tasks and generators.)
+
+    Yield:
+        callable: one of the task.
+    """
+
+    for task in callables:
+        if is_task_list(task):
+            for subtask in task(context):
+                yield subtask
+            continue
+        yield task
 
 
 def fill_function_call(fn, requirements, activity, context):

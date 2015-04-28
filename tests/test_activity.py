@@ -243,10 +243,10 @@ def test_activity_timeouts(monkeypatch, generators):
     schedule_to_start = start_timeout * total_generators
     for instance in current_activity.instances({}):
         assert current_activity.pool_size == total_generators
-        assert current_activity.schedule_to_start == schedule_to_start
-        assert current_activity.timeout == timeout * 2
-        assert current_activity.schedule_to_close == (
-            schedule_to_start + current_activity.timeout)
+        assert instance.schedule_to_start == schedule_to_start
+        assert instance.timeout == timeout * 2
+        assert instance.schedule_to_close == (
+            schedule_to_start + instance.timeout)
 
 
 def test_worker_run(monkeypatch):
@@ -439,10 +439,9 @@ def test_create_activity_instance_input_without_runner(monkeypatch):
     activity_mock.runner = None
     context = dict(context='yes')
     instance = activity.ActivityInstance(activity_mock, context)
-    resp = instance.create_execution_input(dict())
 
-    assert len(resp) == 1
-    assert resp.get('context') == 'yes'
+    with pytest.raises(runner.RunnerMissing):
+        instance.create_execution_input(dict())
 
 
 def test_create_activity_instance_input(monkeypatch):
