@@ -48,7 +48,7 @@ class BaseRunner():
 
             timeout = timeout + task_timeout
 
-        return str(timeout)
+        return timeout
 
     @property
     def heartbeat(self):
@@ -79,7 +79,7 @@ class BaseRunner():
             if task_heartbeat > heartbeat:
                 heartbeat = task_heartbeat
 
-        return str(heartbeat)
+        return heartbeat
 
     @property
     def requirements(self):

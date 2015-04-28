@@ -289,7 +289,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             int: Schedule to close timeout.
         """
 
-        return self.schedule_to_start + int(self.timeout)
+        return self.schedule_to_start + self.timeout
 
     @property
     def timeout(self):

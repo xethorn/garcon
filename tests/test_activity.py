@@ -244,9 +244,9 @@ def test_activity_timeouts(monkeypatch, generators):
     for instance in current_activity.instances({}):
         assert current_activity.pool_size == total_generators
         assert current_activity.schedule_to_start == schedule_to_start
-        assert current_activity.timeout == str(timeout * 2)
+        assert current_activity.timeout == timeout * 2
         assert current_activity.schedule_to_close == (
-            schedule_to_start + int(current_activity.timeout))
+            schedule_to_start + current_activity.timeout)
 
 
 def test_worker_run(monkeypatch):

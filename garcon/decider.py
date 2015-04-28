@@ -173,7 +173,8 @@ class DeciderWorker(swf.Decider):
                     self.version,
                     task_list=current.activity_worker.task_list,
                     input=json.dumps(current.create_execution_input(context)),
-                    heartbeat_timeout=current.activity_worker.heartbeat_timeout,
+                    heartbeat_timeout=str(
+                        current.activity_worker.heartbeat_timeout),
                     start_to_close_timeout=str(
                         current.activity_worker.timeout),
                     schedule_to_start_timeout=str(

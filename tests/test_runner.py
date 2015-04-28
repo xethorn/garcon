@@ -81,7 +81,7 @@ def test_calculate_timeout_with_no_tasks():
     """
 
     task_list = runner.BaseRunner()
-    assert task_list.timeout == '0'
+    assert task_list.timeout == 0
 
 
 def test_calculate_heartbeat_with_no_tasks():
@@ -89,7 +89,7 @@ def test_calculate_heartbeat_with_no_tasks():
     """
 
     task_list = runner.BaseRunner()
-    assert task_list.heartbeat == '0'
+    assert task_list.heartbeat == 0
 
 
 def test_calculate_default_timeout():
@@ -97,7 +97,7 @@ def test_calculate_default_timeout():
     """
 
     task_list = runner.BaseRunner(lambda x: x)
-    assert task_list.timeout == str(runner.DEFAULT_TASK_TIMEOUT)
+    assert task_list.timeout == runner.DEFAULT_TASK_TIMEOUT
 
 
 def test_calculate_default_heartbeat():
@@ -105,7 +105,7 @@ def test_calculate_default_heartbeat():
     """
 
     task_list = runner.BaseRunner(lambda x: x)
-    assert task_list.heartbeat == str(runner.DEFAULT_TASK_HEARTBEAT)
+    assert task_list.heartbeat == runner.DEFAULT_TASK_HEARTBEAT
 
 
 def test_calculate_timeout():
@@ -119,20 +119,20 @@ def test_calculate_timeout():
         pass
 
     current_runner = runner.BaseRunner(task_a)
-    assert current_runner.timeout == str(timeout)
+    assert current_runner.timeout == timeout
 
     @task.decorate(timeout=timeout)
     def task_b():
         pass
 
     current_runner = runner.BaseRunner(task_b)
-    assert current_runner.timeout == str(timeout)
+    assert current_runner.timeout == timeout
 
     def task_c():
         pass
 
     current_runner = runner.BaseRunner(task_a, task_c)
-    assert current_runner.timeout == str(timeout + runner.DEFAULT_TASK_TIMEOUT)
+    assert current_runner.timeout == timeout + runner.DEFAULT_TASK_TIMEOUT
 
 
 def test_calculate_heartbeat():
@@ -144,14 +144,14 @@ def test_calculate_heartbeat():
         pass
 
     current_runner = runner.BaseRunner(task_a)
-    assert current_runner.heartbeat == str(5)
+    assert current_runner.heartbeat == 5
 
     @task.decorate(heartbeat=3)
     def task_b():
         pass
 
     current_runner = runner.BaseRunner(task_b)
-    assert current_runner.heartbeat == str(3)
+    assert current_runner.heartbeat == 3
 
     @task.decorate(heartbeat=4498)
     def task_c():
@@ -162,7 +162,7 @@ def test_calculate_heartbeat():
 
     current_runner = runner.BaseRunner(
         task_a, task_b, task_c, task_d)
-    assert current_runner.heartbeat == str(4498)
+    assert current_runner.heartbeat == 4498
 
 
 
