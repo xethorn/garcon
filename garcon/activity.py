@@ -57,7 +57,8 @@ DEFAULT_ACTIVITY_SCHEDULE_TO_START = 600  # 10 minutes
 
 class ActivityInstance:
 
-    def __init__(self, activity_worker, context=None):
+    def __init__(
+            self, activity_worker, local_context=None, execution_context=None):
         """Activity Instance.
 
         In SWF, Activity is a worker: it will get information from the context,
@@ -69,14 +70,20 @@ class ActivityInstance:
         Args:
             activity_worker (ActivityWorker): The activity worker that owns
                 this specific Activity Instance.
-            context (dict): the local context of the activity (it does not
-                include the execution context.) Most times the context will be
-                empty since it is only filled with data that comes from the
+            local_context (dict): the local context of the activity (it does
+                not include the execution context.) Most times the context will
+                be empty since it is only filled with data that comes from the
                 generators.
+            execution_context (dict): the execution context of when an activity
+                will be scheduled with.
         """
 
         self.activity_worker = activity_worker
-        self.context = context or dict()
+        self.execution_context = execution_context or dict()
+        self.local_context = local_context or dict()
+        self.global_context =  dict(
+            list(self.execution_context.items()) +
+            list(self.local_context.items()))
 
     @property
     def activity_name(self):
@@ -105,10 +112,10 @@ class ActivityInstance:
                 id.
         """
 
-        if not self.context:
+        if not self.local_context:
             activity_id = 1
         else:
-            activity_id = utils.create_dictionary_key(self.context)
+            activity_id = utils.create_dictionary_key(self.local_context)
 
         return '{name}-{id}'.format(
             name=self.activity_name,
@@ -158,7 +165,7 @@ class ActivityInstance:
             int: Task list timeout.
         """
 
-        return self.runner.timeout(self.context)
+        return self.runner.timeout(self.global_context)
 
     @property
     def heartbeat_timeout(self):
@@ -172,7 +179,7 @@ class ActivityInstance:
             int: Task list timeout.
         """
 
-        return self.runner.heartbeat(self.context)
+        return self.runner.heartbeat(self.global_context)
 
     @property
     def runner(self):
@@ -192,32 +199,27 @@ class ActivityInstance:
             raise runner.RunnerMissing()
         return activity_runner
 
-    def create_execution_input(self, context):
+    def create_execution_input(self):
         """Create the input of the activity from the context.
 
         AWS has a limit on the number of characters that can be used (32k). If
         you use the `task.decorate`, the data sent to the activity is optimized
         to match the values of the context.
 
-        Args:
-            context (dict): the current execution context (which is different
-                from the activity context.)
-
         Return:
             dict: the input to send to the activity.
         """
 
         activity_input = dict()
-        context = dict(list(context.items()) + list(self.context.items()))
 
         try:
-            for requirement in self.runner.requirements(self.context):
-                value = context.get(requirement)
+            for requirement in self.runner.requirements(self.global_context):
+                value = self.global_context.get(requirement)
                 if value:
                     activity_input.update({requirement: value})
 
         except runner.NoRunnerRequirementsFound:
-            return context
+            return self.global_context
         return activity_input
 
 
@@ -334,7 +336,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
                 instance_context.update(current_generator_context.items())
 
             yield ActivityInstance(
-                self, context=instance_context)
+                self, execution_context=context, local_context=instance_context)
 
 
 class ActivityWorker():
