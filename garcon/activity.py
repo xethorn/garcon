@@ -57,7 +57,8 @@ DEFAULT_ACTIVITY_SCHEDULE_TO_START = 600  # 10 minutes
 
 class ActivityInstance:
 
-    def __init__(self, activity_worker, context=None):
+    def __init__(
+            self, activity_worker, local_context=None, execution_context=None):
         """Activity Instance.
 
         In SWF, Activity is a worker: it will get information from the context,
@@ -69,14 +70,20 @@ class ActivityInstance:
         Args:
             activity_worker (ActivityWorker): The activity worker that owns
                 this specific Activity Instance.
-            context (dict): the local context of the activity (it does not
-                include the execution context.) Most times the context will be
-                empty since it is only filled with data that comes from the
+            local_context (dict): the local context of the activity (it does
+                not include the execution context.) Most times the context will
+                be empty since it is only filled with data that comes from the
                 generators.
+            execution_context (dict): the execution context of when an activity
+                will be scheduled with.
         """
 
         self.activity_worker = activity_worker
-        self.context = context or dict()
+        self.execution_context = execution_context or dict()
+        self.local_context = local_context or dict()
+        self.global_context =  dict(
+            list(self.execution_context.items()) +
+            list(self.local_context.items()))
 
     @property
     def activity_name(self):
@@ -105,44 +112,114 @@ class ActivityInstance:
                 id.
         """
 
-        if not self.context:
+        if not self.local_context:
             activity_id = 1
         else:
-            activity_id = utils.create_dictionary_key(self.context)
+            activity_id = utils.create_dictionary_key(self.local_context)
 
         return '{name}-{id}'.format(
             name=self.activity_name,
             id=activity_id)
 
-    def create_execution_input(self, context):
+    @property
+    def schedule_to_start(self):
+        """Return the schedule to start timeout.
+
+        The schedule to start timeout assumes that only one activity worker is
+        available (since swf does not provide a count of available workers). So
+        if the default value is 5 minutes, and you have 10 instances: the
+        schedule to start will be 50 minutes for all instances.
+
+        Return:
+            int: Schedule to start timeout.
+        """
+
+        return (
+            self.activity_worker.pool_size *
+                self.activity_worker.schedule_to_start_timeout)
+
+    @property
+    def schedule_to_close(self):
+        """Return the schedule to close timeout.
+
+        The schedule to close timeout is a simple calculation that defines when
+        an activity (from the moment it has been scheduled) should end. It is
+        a calculation between the schedule to start timeout and the activity
+        timeout.
+
+        Return:
+            int: Schedule to close timeout.
+        """
+
+        return self.schedule_to_start + self.timeout
+
+    @property
+    def timeout(self):
+        """Return the timeout in seconds.
+
+        This timeout corresponds on when the activity has started and when we
+        assume the activity has ended (which corresponds in boto to
+        start_to_close_timeout.)
+
+        Return:
+            int: Task list timeout.
+        """
+
+        return self.runner.timeout(self.global_context)
+
+    @property
+    def heartbeat_timeout(self):
+        """Return the heartbeat in seconds.
+
+        This heartbeat corresponds on when an activity needs to send a signal
+        to swf that it is still running. This will set the value when the
+        activity is scheduled.
+
+        Return:
+            int: Task list timeout.
+        """
+
+        return self.runner.heartbeat(self.global_context)
+
+    @property
+    def runner(self):
+        """Shortcut to get access to the runner.
+
+        Raises:
+            runner.RunnerMissing: an activity should always have a runner,
+                if the runner is missing an exception is raised (we will not
+                be able to calculate values such as timeouts without a runner.)
+
+        Return:
+            Runner: the activity runner.
+        """
+
+        activity_runner = getattr(self.activity_worker, 'runner', None)
+        if not activity_runner:
+            raise runner.RunnerMissing()
+        return activity_runner
+
+    def create_execution_input(self):
         """Create the input of the activity from the context.
 
         AWS has a limit on the number of characters that can be used (32k). If
         you use the `task.decorate`, the data sent to the activity is optimized
         to match the values of the context.
 
-        Args:
-            context (dict): the current execution context (which is different
-                from the activity context.)
-
         Return:
             dict: the input to send to the activity.
         """
 
         activity_input = dict()
-        context = dict(list(context.items()) + list(self.context.items()))
 
         try:
-            if not getattr(self.activity_worker, 'runner', None):
-                raise runner.NoRunnerRequirementsFound()
-
-            for requirement in self.activity_worker.runner.requirements:
-                value = context.get(requirement)
+            for requirement in self.runner.requirements(self.global_context):
+                value = self.global_context.get(requirement)
                 if value:
                     activity_input.update({requirement: value})
 
         except runner.NoRunnerRequirementsFound:
-            return context
+            return self.global_context
         return activity_input
 
 
@@ -241,7 +318,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
 
         if not self.generators:
             self.pool_size = 1
-            yield ActivityInstance(self)
+            yield ActivityInstance(self, execution_context=context)
             return
 
         generator_values = []
@@ -259,65 +336,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
                 instance_context.update(current_generator_context.items())
 
             yield ActivityInstance(
-                self, context=instance_context)
-
-    @property
-    def schedule_to_start(self):
-        """Return the schedule to start timeout.
-
-        The schedule to start timeout assumes that only one activity worker is
-        available (since swf does not provide a count of available workers). So
-        if the default value is 5 minutes, and you have 10 instances: the
-        schedule to start will be 50 minutes for all instances.
-
-        Return:
-            int: Schedule to start timeout.
-        """
-
-        return self.pool_size * self.schedule_to_start_timeout
-
-    @property
-    def schedule_to_close(self):
-        """Return the schedule to close timeout.
-
-        The schedule to close timeout is a simple calculation that defines when
-        an activity (from the moment it has been scheduled) should end. It is
-        a calculation between the schedule to start timeout and the activity
-        timeout.
-
-        Return:
-            int: Schedule to close timeout.
-        """
-
-        return self.schedule_to_start + self.timeout
-
-    @property
-    def timeout(self):
-        """Return the timeout in seconds.
-
-        This timeout corresponds on when the activity has started and when we
-        assume the activity has ended (which corresponds in boto to
-        start_to_close_timeout.)
-
-        Return:
-            int: Task list timeout.
-        """
-
-        return self.runner.timeout
-
-    @property
-    def heartbeat_timeout(self):
-        """Return the heartbeat in seconds.
-
-        This heartbeat corresponds on when an activity needs to send a signal
-        to swf that it is still running. This will set the value when the
-        activity is scheduled.
-
-        Return:
-            int: Task list timeout.
-        """
-
-        return self.runner.heartbeat
+                self, execution_context=context, local_context=instance_context)
 
 
 class ActivityWorker():

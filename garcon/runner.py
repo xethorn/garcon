@@ -9,6 +9,8 @@ or in parallel). There's only one task runner per activity.
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
+from garcon.task import flatten
+
 
 DEFAULT_TASK_TIMEOUT = 600  # 10 minutes.
 DEFAULT_TASK_HEARTBEAT = 600 # 10 minutes
@@ -17,14 +19,16 @@ DEFAULT_TASK_HEARTBEAT = 600 # 10 minutes
 class NoRunnerRequirementsFound(Exception):
     pass
 
+class RunnerMissing(Exception):
+    pass
+
 
 class BaseRunner():
 
     def __init__(self, *args):
         self.tasks = args
 
-    @property
-    def timeout(self):
+    def timeout(self, context):
         """Calculate and return the timeout for an activity.
 
         The calculation of the timeout is pessimistic: it takes the worse case
@@ -38,7 +42,7 @@ class BaseRunner():
 
         timeout = 0
 
-        for task in self.tasks:
+        for task in flatten(self.tasks, context):
             task_timeout = DEFAULT_TASK_TIMEOUT
             task_details = getattr(task, '__garcon__', None)
 
@@ -50,8 +54,7 @@ class BaseRunner():
 
         return timeout
 
-    @property
-    def heartbeat(self):
+    def heartbeat(self, context):
         """Calculate and return the heartbeat for an activity.
 
         The heartbeat represents when an actvitity should be sending a signal
@@ -68,7 +71,7 @@ class BaseRunner():
 
         heartbeat = 0
 
-        for task in self.tasks:
+        for task in flatten(self.tasks, context):
             task_details = getattr(task, '__garcon__', None)
             task_heartbeat = DEFAULT_TASK_HEARTBEAT
 
@@ -81,8 +84,7 @@ class BaseRunner():
 
         return heartbeat
 
-    @property
-    def requirements(self):
+    def requirements(self, context):
         """Find all the requirements from the list of tasks and return it.
 
         If a task does not use the `task.decorate`, no assumptions can be made
@@ -99,7 +101,10 @@ class BaseRunner():
 
         requirements = []
 
-        for task in self.tasks:
+        # Get all the tasks and the lists (so the .fill on lists are also
+        # considered.)
+        all_tasks = list(self.tasks) + list(flatten(self.tasks, context))
+        for task in all_tasks:
             task_details = getattr(task, '__garcon__', None)
             if task_details:
                 requirements += task_details.get('requirements', [])
@@ -118,7 +123,7 @@ class Sync(BaseRunner):
 
     def execute(self, activity, context):
         result = dict()
-        for task in self.tasks:
+        for task in flatten(self.tasks, context):
             activity.heartbeat()
             task_context = dict(list(result.items()) + list(context.items()))
             resp = task(task_context, activity=activity)
@@ -136,7 +141,7 @@ class Async(BaseRunner):
         result = dict()
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             tasks = []
-            for task in self.tasks:
+            for task in flatten(self.tasks, context):
                 tasks.append(executor.submit(task, context, activity=activity))
 
             for future in futures.as_completed(tasks):

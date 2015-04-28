@@ -35,6 +35,14 @@ def test_timeout_decorator_with_heartbeat():
     assert test.__garcon__.get('heartbeat') == heartbeat
     assert test.__garcon__.get('timeout') == timeout
 
+    @task.timeout(timeout)
+    @task.decorate(timeout=heartbeat)
+    def test2():
+        pass
+
+    assert test2.__garcon__.get('heartbeat') == heartbeat
+    assert test2.__garcon__.get('timeout') == timeout
+
 
 def test_decorator():
     """Test the Decorator.
@@ -55,6 +63,17 @@ def test_decorator():
     task._decorate(test, 'foo', 'bar')
     assert test.__garcon__.get('foo') is 'bar'
 
+
+def test_generator_decorator():
+    """Test the geneartor decorator.
+    """
+
+    @task.list
+    def test():
+        pass
+
+    assert test.__garcon__.get('list')
+    assert task.is_task_list(test)
 
 def test_link_decorator():
     """Test linking the decorator between two methods.
@@ -247,6 +266,32 @@ def test_contextify_with_mapped_response():
     assert isinstance(resp, dict)
     assert len(resp) == 1
     assert resp.get('somethingrandom.return_value') is return_value
+
+
+def test_flatten():
+    """Test the flatten function.
+    """
+
+    spy = MagicMock
+
+    @task.decorate(timeout=10)
+    def task_a(name):
+        pass
+
+    @task.decorate(timeout=10)
+    def task_b(name):
+        pass
+
+    @task.list
+    def task_generator(context):
+        yield task_b
+        if context.get('value'):
+            yield task_a
+
+    value = list(task.flatten(
+        (task_a, task_b, task_generator, task_a),
+        dict(value='something')))
+    assert value == [task_a, task_b, task_b, task_a, task_a]
 
 
 def test_fill_function_call():

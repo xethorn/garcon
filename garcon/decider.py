@@ -172,15 +172,11 @@ class DeciderWorker(swf.Decider):
                     current.activity_name,
                     self.version,
                     task_list=current.activity_worker.task_list,
-                    input=json.dumps(current.create_execution_input(context)),
-                    heartbeat_timeout=str(
-                        current.activity_worker.heartbeat_timeout),
-                    start_to_close_timeout=str(
-                        current.activity_worker.timeout),
-                    schedule_to_start_timeout=str(
-                        current.activity_worker.schedule_to_start),
-                    schedule_to_close_timeout=str(
-                        current.activity_worker.schedule_to_close))
+                    input=json.dumps(current.create_execution_input()),
+                    heartbeat_timeout=str(current.heartbeat_timeout),
+                    start_to_close_timeout=str(current.timeout),
+                    schedule_to_start_timeout=str(current.schedule_to_start),
+                    schedule_to_close_timeout=str(current.schedule_to_close))
             else:
                 activities = list(
                     activity.find_uncomplete_activities(

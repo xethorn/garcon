@@ -203,16 +203,16 @@ def test_instances_creation(monkeypatch, generators):
         instances = list(current_activity.instances(dict()))
         assert len(instances) == pow(10, len(generators))
         for instance in instances:
-            assert isinstance(instance.context.get('i'), int)
+            assert isinstance(instance.local_context.get('i'), int)
 
             if len(generators) == 2:
-                assert isinstance(instance.context.get('d'), int)
+                assert isinstance(instance.local_context.get('d'), int)
     else:
         instances = list(current_activity.instances(dict()))
         assert len(instances) == 1
-        assert isinstance(instances[0].context, dict)
+        assert isinstance(instances[0].local_context, dict)
         # Context is empty since no generator was used.
-        assert not instances[0].context
+        assert not instances[0].local_context
 
 
 def test_activity_timeouts(monkeypatch, generators):
@@ -243,10 +243,10 @@ def test_activity_timeouts(monkeypatch, generators):
     schedule_to_start = start_timeout * total_generators
     for instance in current_activity.instances({}):
         assert current_activity.pool_size == total_generators
-        assert current_activity.schedule_to_start == schedule_to_start
-        assert current_activity.timeout == timeout * 2
-        assert current_activity.schedule_to_close == (
-            schedule_to_start + current_activity.timeout)
+        assert instance.schedule_to_start == schedule_to_start
+        assert instance.timeout == timeout * 2
+        assert instance.schedule_to_close == (
+            schedule_to_start + instance.timeout)
 
 
 def test_worker_run(monkeypatch):
@@ -439,10 +439,9 @@ def test_create_activity_instance_input_without_runner(monkeypatch):
     activity_mock.runner = None
     context = dict(context='yes')
     instance = activity.ActivityInstance(activity_mock, context)
-    resp = instance.create_execution_input(dict())
 
-    assert len(resp) == 1
-    assert resp.get('context') == 'yes'
+    with pytest.raises(runner.RunnerMissing):
+        instance.create_execution_input()
 
 
 def test_create_activity_instance_input(monkeypatch):
@@ -456,8 +455,10 @@ def test_create_activity_instance_input(monkeypatch):
     activity_mock = MagicMock()
     activity_mock.name = 'activity'
     activity_mock.runner = runner.BaseRunner(task_a.fill(value='context'))
-    instance = activity.ActivityInstance(activity_mock, dict(context='yes'))
-    resp = instance.create_execution_input(dict(somemore='values'))
+    instance = activity.ActivityInstance(
+        activity_mock, local_context=dict(context='yes'),
+        execution_context=dict(somemore='values'))
+    resp = instance.create_execution_input()
 
     assert len(resp) == 1
     assert resp.get('context') == 'yes'
@@ -476,8 +477,10 @@ def test_create_activity_instance_input_without_decorate(monkeypatch):
     local_context = dict(context='yes')
 
     activity_mock.runner = runner.BaseRunner(task_a)
-    instance = activity.ActivityInstance(activity_mock, local_context)
+    instance = activity.ActivityInstance(
+        activity_mock, local_context=local_context,
+        execution_context=context)
 
-    resp = instance.create_execution_input(context)
+    resp = instance.create_execution_input()
     assert resp.get('foo') == 'bar'
     assert resp.get('context') == 'yes'
