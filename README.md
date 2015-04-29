@@ -63,6 +63,20 @@ test_activity_4 = create(
         lambda activity, context: print('activity_4')))
 ```
 
+### Features
+
+Garcon  provides several useful features that will enable you to perform more
+complex actions:
+
+
+- Timeouts: most timeout are calculated automatically.
+- Generators: They spawn one or more instances of an activity based on values
+  provided in the context
+  ([see example](https://gist.github.com/xethorn/2cefcc85d5093b12d065).)
+- Task lists: You can programatically write a task list.
+  ([see example](https://gist.github.com/mortaliorchard/6eca8a1723eea16ff2ac))
+
+
 ### Application architecture
 
 ```
