@@ -93,6 +93,6 @@ complex actions:
 
 ### Contributors
 
-* Michael Ortali (@[xethorn](github.com/xethorn))
+* Michael Ortali ([@xethorn](github.com/xethorn))
 * Adam Griffiths ([@adamlwgriffiths](github.com/adamlwgriffiths))
-* Raphael Antonmattei (@[rantonmattei](github.com/rantonmattei))
+* Raphael Antonmattei ([@rantonmattei](github.com/rantonmattei))
