@@ -149,3 +149,20 @@ class Async(BaseRunner):
                 data = future.result()
                 result.update(data or {})
         return result
+
+
+class External(BaseRunner):
+
+    def __init__(self, timeout=None, heartbeat=None):
+        """Create the External Runner.
+
+        Args:
+            timeout (int): activity timeout in seconds (mandatory)
+            heartbeat (int): heartbeat timeout in seconds, if not defined, it will
+                be equal to the timeout.
+        """
+
+        assert timeout, 'External runner requires a timeout.'
+
+        self.timeout = lambda ctx=None: timeout
+        self.heartbeat = lambda ctx=None: (heartbeat or timeout)
