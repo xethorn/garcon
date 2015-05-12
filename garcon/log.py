@@ -21,8 +21,9 @@ class GarconLogger:
     from that logger.
 
     The formatter for your handler(s) must use the logger name.
-    Formatter Example:
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    Formatter Example::
+
+        %(asctime)s - %(name)s - %(levelname)s - %(message)s
 
     This formatter will generate a log message as follow:
     '2015-01-15 - garcon.[domain].[workflow_id].[run_id] - [level] - [message]'

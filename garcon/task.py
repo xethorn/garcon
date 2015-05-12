@@ -72,7 +72,7 @@ def list(fn):
     tasks based on it. Note: depending on the tasks returned by the generator,
     the timout values will be calculated differently.
 
-    For instance:
+    For instance::
 
         @task.list
         def create_client(context):
