@@ -175,6 +175,43 @@ def test_hydrate_activity(monkeypatch):
         tasks=[lambda: dict('val')]))
 
 
+def test_create_activity(monkeypatch):
+    """Test the creation of an activity via `create`.
+    """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    create = activity.create('domain_name', 'flow_name')
+
+    current_activity = create(name='activity_name')
+    assert isinstance(current_activity, activity.Activity)
+    assert current_activity.name == 'flow_name_activity_name'
+    assert current_activity.task_list == 'flow_name_activity_name'
+    assert current_activity.domain == 'domain_name'
+
+
+def test_create_external_activity(monkeypatch):
+    """Test the creation of an external activity via `create`.
+    """
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    create = activity.create('domain_name', 'flow_name')
+
+    current_activity = create(
+        name='activity_name',
+        timeout=60,
+        heartbeat=40,
+        external=True)
+
+    assert isinstance(current_activity, activity.ExternalActivity)
+    assert current_activity.name == 'flow_name_activity_name'
+    assert current_activity.task_list == 'flow_name_activity_name'
+    assert current_activity.domain == 'domain_name'
+
+    assert isinstance(current_activity.runner, runner.External)
+    assert current_activity.runner.heartbeat() == 40
+    assert current_activity.runner.timeout() == 60
+
+
 def test_create_activity_worker(monkeypatch):
     """Test the creation of an activity worker.
     """
@@ -196,23 +233,26 @@ def test_instances_creation(monkeypatch, generators):
 
     monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
 
-    current_activity = activity.Activity()
-    current_activity.generators = generators
+    local_activity = activity.Activity()
+    external_activity = activity.ExternalActivity(timeout=60)
 
-    if len(current_activity.generators):
-        instances = list(current_activity.instances(dict()))
-        assert len(instances) == pow(10, len(generators))
-        for instance in instances:
-            assert isinstance(instance.local_context.get('i'), int)
+    for current_activity in [local_activity, external_activity]:
+        current_activity.generators = generators
 
-            if len(generators) == 2:
-                assert isinstance(instance.local_context.get('d'), int)
-    else:
-        instances = list(current_activity.instances(dict()))
-        assert len(instances) == 1
-        assert isinstance(instances[0].local_context, dict)
-        # Context is empty since no generator was used.
-        assert not instances[0].local_context
+        if len(current_activity.generators):
+            instances = list(current_activity.instances(dict()))
+            assert len(instances) == pow(10, len(generators))
+            for instance in instances:
+                assert isinstance(instance.local_context.get('i'), int)
+
+                if len(generators) == 2:
+                    assert isinstance(instance.local_context.get('d'), int)
+        else:
+            instances = list(current_activity.instances(dict()))
+            assert len(instances) == 1
+            assert isinstance(instances[0].local_context, dict)
+            # Context is empty since no generator was used.
+            assert not instances[0].local_context
 
 
 def test_activity_timeouts(monkeypatch, generators):
@@ -245,6 +285,28 @@ def test_activity_timeouts(monkeypatch, generators):
         assert current_activity.pool_size == total_generators
         assert instance.schedule_to_start == schedule_to_start
         assert instance.timeout == timeout * 2
+        assert instance.schedule_to_close == (
+            schedule_to_start + instance.timeout)
+
+
+def test_external_activity_timeouts(monkeypatch, generators):
+    """Test the creation of an external activity timeouts.
+    """
+
+    timeout = 120
+    start_timeout = 1000
+
+    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
+    current_activity = activity.ExternalActivity(timeout=timeout)
+    current_activity.hydrate(dict(schedule_to_start=start_timeout))
+    current_activity.generators = generators
+
+    total_generators = pow(10, len(current_activity.generators))
+    schedule_to_start = start_timeout * total_generators
+    for instance in current_activity.instances({}):
+        assert current_activity.pool_size == total_generators
+        assert instance.schedule_to_start == schedule_to_start
+        assert instance.timeout == timeout
         assert instance.schedule_to_close == (
             schedule_to_start + instance.timeout)
 
@@ -315,6 +377,26 @@ def test_worker_infinite_loop():
     activity.worker_runner(Activity())
     assert spy.called
     assert spy.call_count == 5
+
+
+def test_worker_infinite_loop_on_external(monkeypatch):
+    """There is no worker for external activities.
+    """
+
+    external_activity = activity.ExternalActivity(timeout=10)
+    current_run = external_activity.run
+    spy = MagicMock()
+
+    def run():
+        spy()
+        return current_run()
+
+    monkeypatch.setattr(external_activity, 'run', run)
+    activity.worker_runner(external_activity)
+
+    # This test might not fail, but it will hang the test suite since it is
+    # going to trigger an infinite loop.
+    assert spy.call_count == 1
 
 
 def test_activity_launch_sequence():

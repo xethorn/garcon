@@ -339,6 +339,36 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
                 self, execution_context=context, local_context=instance_context)
 
 
+class ExternalActivity(Activity):
+    """External activity
+
+    One of the main advantages of SWF is the ability to write a workflow that
+    has activities written in any languages. The external activity class allows
+    to write the workflow in Garcon and benefit from some features (timeout
+    calculation among other things, sending context data.)
+    """
+
+    def __init__(self, timeout=None, heartbeat=None):
+        """Create the External Activity.
+
+        Args:
+            timeout (int): activity timeout in seconds (mandatory)
+            heartbeat (int): heartbeat timeout in seconds, if not defined, it will
+                be equal to the timeout.
+        """
+
+        self.runner = runner.External(timeout=timeout, heartbeat=heartbeat)
+
+    def run(self):
+        """Run the external activity.
+
+        This activity is handled outside, so the run method should remain
+        unimplemented and return False (so the run loop stops.)
+        """
+
+        return False
+
+
 class ActivityWorker():
 
     def __init__(self, flow, activities=None):
@@ -397,6 +427,12 @@ def create(domain, name):
 
     def wrapper(**options):
         activity = Activity()
+
+        if options.get('external'):
+            activity = ExternalActivity(
+                timeout=options.get('timeout'),
+                heartbeat=options.get('heartbeat'))
+
         activity_name = '{name}_{activity}'.format(
             name=name,
             activity=options.get('name'))
