@@ -7,12 +7,14 @@ Lightweight library for AWS SWF.
 > from clients (deciders), and send them to the kitchen (activities). Difficult
 > clients and kitchens can be handled directly by the restaurant manager.
 
-### Requirements
+Requirements
+------------
 
 * Python 2.7, 3.4 (tested)
 * Boto 2.34.0 (tested)
 
-### Goal
+Goal
+----
 
 The goal of this library is to allow the creation of Amazon Simple Workflow
 without the need to worry about the orchestration of the different activities
@@ -20,7 +22,8 @@ and building out the different workers. This framework aims to help simple
 workflows. If you have a more complex case, you might want to use directly
 boto.
 
-### Code sample
+Code sample
+-----------
 
 The code sample shows a workflow that has 4 activities. It starts with
 activity_1, which after being completed schedule activity_2 and activity_3 to
@@ -63,7 +66,8 @@ test_activity_4 = create(
         lambda activity, context: print('activity_4')))
 ```
 
-### Features
+Features
+--------
 
 Garcon  provides several useful features that will enable you to perform more
 complex actions:
@@ -77,7 +81,8 @@ complex actions:
   ([see example](https://gist.github.com/mortaliorchard/6eca8a1723eea16ff2ac))
 
 
-### Application architecture
+Application architecture
+------------------------
 
 ```
 .
@@ -91,7 +96,8 @@ complex actions:
 └── task_example.py # Your different tasks.
 ```
 
-### Contributors
+Contributors
+------------
 
 * Michael Ortali (@[xethorn](github.com/xethorn))
 * Adam Griffiths ([@adamlwgriffiths](github.com/adamlwgriffiths))
