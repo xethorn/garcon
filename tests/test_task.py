@@ -7,6 +7,7 @@ except:
 import pytest
 
 from garcon import task
+from garcon import param
 
 
 def test_timeout_decorator():
@@ -301,7 +302,9 @@ def test_fill_function_call():
     def test_function(activity, arg_one, key, kwarg_one=None, kwarg_two=None):
         pass
 
-    requirements = dict(arg_one='context.arg', kwarg_one='context.kwarg')
+    requirements = dict(
+        arg_one=param.Param('context.arg'),
+        kwarg_one=param.Param('context.kwarg'))
     activity = None
     context = {
         'context.arg': 'arg.value',
