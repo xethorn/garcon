@@ -10,6 +10,7 @@ executed and when based on the flow procided.
 from boto.swf.exceptions import SWFDomainAlreadyExistsError
 from boto.swf.exceptions import SWFTypeAlreadyExistsError
 import boto.swf.layer2 as swf
+import functools
 import json
 
 from garcon import activity
@@ -129,6 +130,66 @@ class DeciderWorker(swf.Decider):
                     swf_entity.__class__.__name__, swf_entity.name,
                     'already exists')
 
+    def create_decisions_from_flow(self, decisions, activity_states, context):
+        """Create the decisions from the flow.
+
+        Simple flows don't need a custom decider, since all the requirements
+        can be provided at the activity level. Discovery of the next activity
+        to schedule is thus very straightforward.
+
+        Args:
+            decisions (Layer1Decisions): the layer decision for swf.
+            activity_states (dict): all the state activities.
+            context (dict): the context of the activities.
+        """
+
+        try:
+            for current in activity.find_available_activities(
+                    self.flow, activity_states, context):
+
+                schedule_activity_task(
+                    decisions, current, version=self.version)
+            else:
+                activities = list(
+                    activity.find_uncomplete_activities(
+                        self.flow, activity_states, context))
+                if not activities:
+                    decisions.complete_workflow_execution()
+        except Exception as e:
+            decisions.fail_workflow_execution(reason=str(e))
+
+    def delegate_decisions(self, decisions, decider, history, context):
+        """Delegate the decisions.
+
+        For more complex flows (the ones that have, for instance, optional
+        activities), you can write your own decider. The decider receives a
+        method `schedule` which schedule the activity if not scheduled yet,
+        and if scheduled, returns its result.
+
+        Args:
+            decisions (Layer1Decisions): the layer decision for swf.
+            decider (callable): the decider (it needs to have schedule)
+            history (dict): all the state activities and its history.
+            context (dict): the context of the activities.
+        """
+
+        schedule_context = ScheduleContext()
+        decider_schedule = functools.partial(
+            schedule, decisions, schedule_context, history, context,
+            version=self.version)
+
+        try:
+            decider(schedule=decider_schedule)
+
+            # When no exceptions are raised and the method decider has returned
+            # it means that there i nothing left to do in the current decider.
+            if schedule_context.completed:
+                decisions.complete_workflow_execution()
+        except activity.ActivityInstanceNotReadyException:
+            pass
+        except Exception as e:
+            decisions.fail_workflow_execution(reason=str(e))
+
     def run(self):
         """Run the decider.
 
@@ -148,6 +209,7 @@ class DeciderWorker(swf.Decider):
         """
 
         poll = self.poll()
+        custom_decider = getattr(self.flow, 'decider', None)
 
         if 'events' not in poll:
             return True
@@ -161,29 +223,150 @@ class DeciderWorker(swf.Decider):
             context.update(workflow_execution_info)
 
         decisions = swf.Layer1Decisions()
-
-        try:
-            for current in activity.find_available_activities(
-                    self.flow, activity_states, context):
-
-                decisions.schedule_activity_task(
-                    current.id,  # activity id.
-                    current.activity_name,
-                    self.version,
-                    task_list=current.activity_worker.task_list,
-                    input=json.dumps(current.create_execution_input()),
-                    heartbeat_timeout=str(current.heartbeat_timeout),
-                    start_to_close_timeout=str(current.timeout),
-                    schedule_to_start_timeout=str(current.schedule_to_start),
-                    schedule_to_close_timeout=str(current.schedule_to_close))
-            else:
-                activities = list(
-                    activity.find_uncomplete_activities(
-                        self.flow, activity_states, context))
-                if not activities:
-                    decisions.complete_workflow_execution()
-        except Exception as e:
-            decisions.fail_workflow_execution(reason=str(e))
-
+        if not custom_decider:
+            self.create_decisions_from_flow(
+                decisions, activity_states, context)
+        else:
+            self.delegate_decisions(
+                decisions, custom_decider, activity_states, context)
         self.complete(decisions=decisions)
         return True
+
+
+class ScheduleContext:
+    """
+    Schedule Context
+    ================
+
+    The schedule context keeps track of all the current scheduling progress – 
+    which allows to easy determinate if there are more decisions to be taken
+    or if the execution can be closed.
+    """
+
+    def __init__(self):
+        """Create a schedule context.
+        """
+
+        self.completed = True
+
+    def mark_uncompleted(self):
+        """Mark the scheduling as completed.
+
+        When a scheduling is completed, it means all the activities have been
+        properly scheduled and they have all completed.
+        """
+
+        self.completed = False
+
+
+def schedule_activity_task(
+        decisions, instance, version='1.0', id=None):
+    """Schedule an activity task.
+
+    Args:
+        decisions (Layer1Decisions): the layer decision for swf.
+        instance (ActivityInstance): the activity instance to schedule.
+        version (str): the version of the activity instance.
+        id (str): optional id of the activity instance.
+    """
+
+    decisions.schedule_activity_task(
+        id or instance.id,
+        instance.activity_name,
+        version,
+        task_list=instance.activity_worker.task_list,
+        input=json.dumps(instance.create_execution_input()),
+        heartbeat_timeout=str(instance.heartbeat_timeout),
+        start_to_close_timeout=str(instance.timeout),
+        schedule_to_start_timeout=str(instance.schedule_to_start),
+        schedule_to_close_timeout=str(instance.schedule_to_close))
+
+
+def schedule(
+        decisions, schedule_context, history, context, schedule_id,
+        current_activity, requires=None, input=None, version='1.0'):
+    """Schedule an activity.
+
+    Scheduling an activity requires all the requirements to be completed (all
+    activities should be marked as completed). The scheduler also mixes the
+    input with the full execution context to send the data to the activity.
+
+    Args:
+        decisions (Layer1Decisions): the layer decision for swf.
+        schedule_context (dict): information about the schedule.
+        history (dict): history of the execution.
+        context (dict): context of the execution.
+        schedule_id (str): the id of the activity to schedule.
+        current_activity (Activity): the activity to run.
+        requires (list): list of all requirements.
+        input (dict): additional input for the context.
+
+    Throws:
+        ActivityInstanceNotReadyException: if one of the activity in the
+            requirements is not ready.
+
+    Return:
+        State: the state of the schedule (contains the response).
+    """
+
+    ensure_requirements(requires)
+    activity_completed = set()
+    result = dict()
+
+    instance_context = dict()
+    instance_context.update(context or {})
+    instance_context.update(input or {})
+
+    for current in current_activity.instances(instance_context):
+        current_id = '{}-{}'.format(current.id, schedule_id)
+        states = history.get(current.activity_name, {}).get(current_id)
+
+        if states:
+            if states.get_last_state() == activity.ACTIVITY_COMPLETED:
+                result.update(states.result or dict())
+                activity_completed.add(True)
+                continue
+
+            activity_completed.add(False)
+            schedule_context.mark_uncompleted()
+
+            if states.get_last_state() != activity.ACTIVITY_FAILED:
+                continue
+            elif (not instance.retry or
+                    instance.retry < count_activity_failures(states)):
+                raise Exception(
+                    'The activity failures has exceeded its retry limit.')
+
+        activity_completed.add(False)
+        schedule_context.mark_uncompleted()
+        schedule_activity_task(
+            decisions, current, id=current_id, version=version)
+
+    state = activity.ActivityState(current_activity.name)
+    state.add_state(activity.ACTIVITY_SCHEDULED)
+
+    if len(activity_completed) == 1 and True in activity_completed:
+        state.add_state(activity.ACTIVITY_COMPLETED)
+        state.set_result(result)
+    return state
+
+
+def ensure_requirements(requires):
+    """Ensure scheduling meets requirements.
+
+    Verify the state of the requirements to make sure the activity can be
+    scheduled.
+
+    Args:
+        requires (list): list of all requirements.
+
+    Throws:
+        ActivityInstanceNotReadyException: if one of the activity in the
+            requirements is not ready.
+    """
+
+    requires = requires or []
+    for require in requires:
+        if (not require or
+                require.get_last_state() != activity.ACTIVITY_COMPLETED):
+            raise activity.ActivityInstanceNotReadyException()

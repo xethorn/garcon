@@ -55,6 +55,16 @@ ACTIVITY_FAILED = 3
 DEFAULT_ACTIVITY_SCHEDULE_TO_START = 600  # 10 minutes
 
 
+class ActivityInstanceNotReadyException(Exception):
+    """Exception when an activity instance is not ready.
+
+    Activity instances that are considered not ready are instances that have
+    not completed.
+    """
+
+    pass
+
+
 class ActivityInstance:
 
     def __init__(
@@ -423,8 +433,24 @@ class ActivityState:
         """
 
         self.activity_id = activity_id
-        self.result = None
+        self._result = None
         self.states = []
+
+    @property
+    def result(self):
+        """Get the result.
+        """
+
+        if not self.ready:
+            raise ActivityInstanceNotReadyException()
+        return self._result
+
+    @property
+    def ready(self):
+        """Check if an activity is ready.
+        """
+
+        return self.get_last_state() == ACTIVITY_COMPLETED
 
     def get_last_state(self):
         """Get the last state of the activity execution.
@@ -456,9 +482,16 @@ class ActivityState:
             result (dict): Result of the activity.
         """
 
-        if self.result:
+        if self._result:
             raise Exception('Result is ummutable – it should not be changed.')
-        self.result = result
+        self._result = result
+
+    def wait():
+        """Wait until ready.
+        """
+
+        if not self.ready():
+            raise ActivityInstanceNotReadyException()
 
 
 def worker_runner(worker):
