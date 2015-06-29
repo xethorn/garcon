@@ -41,29 +41,33 @@ def activity_states_from_events(events):
 
             activity_events.setdefault(
                 activity_name, {}).setdefault(
-                    activity_id, []).append(activity.ACTIVITY_SCHEDULED)
+                    activity_id, activity.ActivityState(activity_id)).add_state(
+                        activity.ACTIVITY_SCHEDULED)
 
         elif event_type == 'ActivityTaskFailed':
             activity_info = event.get('activityTaskFailedEventAttributes')
-            activity_id = activity_info.get('activityId')
             activity_event = event_id_info.get(
                 activity_info.get('scheduledEventId'))
+            activity_id = activity_event.get('activity_id')
 
             activity_events.setdefault(
                 activity_event.get('activity_name'), {}).setdefault(
-                    activity_event.get('activity_id'), []).append(
+                    activity_id, activity.ActivityState(activity_id)).add_state(
                         activity.ACTIVITY_FAILED)
 
         elif event_type == 'ActivityTaskCompleted':
             activity_info = event.get('activityTaskCompletedEventAttributes')
-            activity_id = activity_info.get('activityId')
             activity_event = event_id_info.get(
                 activity_info.get('scheduledEventId'))
+            activity_id = activity_event.get('activity_id')
 
             activity_events.setdefault(
                 activity_event.get('activity_name'), {}).setdefault(
-                    activity_event.get('activity_id'), []).append(
+                    activity_id, activity.ActivityState(activity_id)).add_state(
                         activity.ACTIVITY_COMPLETED)
+            activity_events.get(
+                activity_event.get('activity_name')).get(
+                    activity_id).set_result(activity_info.get('result'))
 
     return activity_events
 

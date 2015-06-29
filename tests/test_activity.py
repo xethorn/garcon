@@ -566,3 +566,27 @@ def test_create_activity_instance_input_without_decorate(monkeypatch):
     resp = instance.create_execution_input()
     assert resp.get('foo') == 'bar'
     assert resp.get('context') == 'yes'
+
+
+def test_activity_state():
+    """Test the creation of the activity state.
+    """
+
+    activity_id = 'id'
+    state = activity.ActivityState(activity_id)
+    assert state.activity_id is activity_id
+    assert not state.get_last_state()
+
+    state.add_state(activity.ACTIVITY_FAILED)
+    state.add_state(activity.ACTIVITY_COMPLETED)
+    assert len(state.states) == 2
+    assert state.get_last_state() is activity.ACTIVITY_COMPLETED
+
+    result = 'foobar'
+    state.set_result(result)
+    assert state.result == result
+
+    with pytest.raises(Exception):
+        state.set_result('shouldnt reset')
+
+    assert state.result == result
