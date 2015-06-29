@@ -403,6 +403,63 @@ class ActivityWorker():
             Thread(target=worker_runner, args=(activity,)).start()
 
 
+class ActivityState:
+    """
+    Activity State
+    ==============
+
+    Provides information about a specific activity instance state (if the
+    instance is already scheduled, has failed, or has been completed.) Along
+    with the default values, this class also provides additional metadata such
+    as the result of an activity instance.
+    """
+
+    def __init__(self, activity_id):
+        """Create a State.
+
+        Args:
+            activity_id (str): the activity id.
+        """
+
+        self.activity_id = activity_id
+        self.result = None
+        self.states = []
+
+    def get_last_state(self):
+        """Get the last state of the activity execution.
+
+        Return:
+            int: the state of the activity (see: activity.py)
+        """
+
+        if len(self.states):
+            return self.states[-1]
+        return None
+
+    def add_state(self, state):
+        """Add a state in the activity execution.
+
+        Args:
+            state (int): the state of the activity to add (see activity.py)
+        """
+
+        self.states.append(state)
+
+    def set_result(self, result):
+        """Set the result of the activity.
+
+        This method sometimes throws an exception: an activity id can only have
+        one result.
+
+        Args:
+            result (dict): Result of the activity.
+        """
+
+        if self.result:
+            raise Exception('Result is ummutable – it should not be changed.')
+        self.result = result
+
+
 def worker_runner(worker):
     """Run indefinitely the worker.
 
@@ -469,13 +526,13 @@ def find_available_activities(flow, history, context):
         # If an event is already available for the activity, it means it is
         # not in standby anymore, it's either processing or has been completed.
         # The activity is thus not available anymore.
-        events = history.get(instance.activity_name, {}).get(instance.id)
+        states = history.get(instance.activity_name, {}).get(instance.id)
 
-        if events:
-            if events[-1] != ACTIVITY_FAILED:
+        if states:
+            if states.get_last_state() != ACTIVITY_FAILED:
                 continue
             elif (not instance.retry or
-                    instance.retry < count_activity_failures(events)):
+                    instance.retry < count_activity_failures(states)):
                 raise Exception(
                     'The activity failures has exceeded its retry limit.')
 
@@ -487,8 +544,8 @@ def find_available_activities(flow, history, context):
                 can_yield = False
                 break
 
-            for requirement_evt in require_history.values():
-                if not ACTIVITY_COMPLETED in requirement_evt:
+            for requirement_states in require_history.values():
+                if not ACTIVITY_COMPLETED in requirement_states.states:
                     can_yield = False
                     break
 
@@ -511,8 +568,8 @@ def find_uncomplete_activities(flow, history, context):
     """
 
     for instance in find_activities(flow, context):
-        evts = history.get(instance.activity_name, {}).get(instance.id)
-        if not evts or ACTIVITY_COMPLETED not in evts:
+        states = history.get(instance.activity_name, {}).get(instance.id)
+        if not states or ACTIVITY_COMPLETED not in states.states:
             yield instance
 
 
@@ -553,13 +610,13 @@ def find_activities(flow, context):
     return activities
 
 
-def count_activity_failures(events):
+def count_activity_failures(states):
     """Count the number of times an activity has failed.
 
     Args:
-        events (dict): list of activity events.
+        states (dict): list of activity states.
     Return:
         int: The number of times an activity has failed.
     """
 
-    return len([evt for evt in events if evt == ACTIVITY_FAILED])
+    return len([evt for evt in states.states if evt == ACTIVITY_FAILED])
