@@ -25,8 +25,7 @@ def create_dictionary_key(dictionary):
     sorted_dict = sorted(dictionary.items())
 
     key_parts = ''.join([
-        "'{key}':'{val}';".format(
-            key=key, val=val)
-                for (key, val) in sorted_dict])
+        "'{key}':'{val}';".format(key=key, val=val)
+        for (key, val) in sorted_dict])
 
     return hashlib.sha1(key_parts.encode('utf-8')).hexdigest()

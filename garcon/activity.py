@@ -81,7 +81,7 @@ class ActivityInstance:
         self.activity_worker = activity_worker
         self.execution_context = execution_context or dict()
         self.local_context = local_context or dict()
-        self.global_context =  dict(
+        self.global_context = dict(
             list(self.execution_context.items()) +
             list(self.local_context.items()))
 
@@ -136,7 +136,7 @@ class ActivityInstance:
 
         return (
             self.activity_worker.pool_size *
-                self.activity_worker.schedule_to_start_timeout)
+            self.activity_worker.schedule_to_start_timeout)
 
     @property
     def schedule_to_close(self):
@@ -294,7 +294,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         # which is not `run`.
         self.runner = (
             getattr(self, 'runner', None) or
-                data.get('run') or data.get('tasks'))
+            data.get('run') or data.get('tasks'))
 
         self.generators = getattr(
             self, 'generators', None) or data.get('generators')
@@ -337,7 +337,8 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
                 instance_context.update(current_generator_context.items())
 
             yield ActivityInstance(
-                self, execution_context=context, local_context=instance_context)
+                self, execution_context=context,
+                local_context=instance_context)
 
 
 class ExternalActivity(Activity):
@@ -354,8 +355,8 @@ class ExternalActivity(Activity):
 
         Args:
             timeout (int): activity timeout in seconds (mandatory)
-            heartbeat (int): heartbeat timeout in seconds, if not defined, it will
-                be equal to the timeout.
+            heartbeat (int): heartbeat timeout in seconds, if not defined, it
+                will be equal to the timeout.
         """
 
         self.runner = runner.External(timeout=timeout, heartbeat=heartbeat)
@@ -398,7 +399,7 @@ class ActivityWorker():
 
         for activity in self.activities:
             if (self.worker_activities and
-                    not activity.name in self.worker_activities):
+                    activity.name not in self.worker_activities):
                 continue
             Thread(target=worker_runner, args=(activity,)).start()
 
@@ -545,7 +546,7 @@ def find_available_activities(flow, history, context):
                 break
 
             for requirement_states in require_history.values():
-                if not ACTIVITY_COMPLETED in requirement_states.states:
+                if ACTIVITY_COMPLETED not in requirement_states.states:
                     can_yield = False
                     break
 

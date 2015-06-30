@@ -134,9 +134,9 @@ def test_calculate_timeout():
         pass
 
     current_runner = runner.BaseRunner(task_a, task_c)
-    assert (
-        current_runner.timeout(EMPTY_CONTEXT) ==
-            timeout + runner.DEFAULT_TASK_TIMEOUT)
+    current_timeout = current_runner.timeout(EMPTY_CONTEXT)
+    expected_timeout = timeout + runner.DEFAULT_TASK_TIMEOUT
+    assert current_timeout == expected_timeout
 
 
 def test_calculate_heartbeat():
@@ -169,7 +169,6 @@ def test_calculate_heartbeat():
     assert current_runner.heartbeat(EMPTY_CONTEXT) == 4498
 
 
-
 def test_runner_requirements():
     """Test the requirements for the runner
     """
@@ -178,11 +177,9 @@ def test_runner_requirements():
     def task_a():
         pass
 
-
     @task.decorate(timeout=20)
     def task_b():
         pass
-
 
     value_1 = 'context.value'
     value_2 = 'context.value_1'

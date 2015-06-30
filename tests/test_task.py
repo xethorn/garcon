@@ -15,6 +15,7 @@ def test_timeout_decorator():
     """
 
     timeout = 10
+
     @task.timeout(timeout)
     def test():
         pass
@@ -75,6 +76,7 @@ def test_generator_decorator():
 
     assert test.__garcon__.get('list')
     assert task.is_task_list(test)
+
 
 def test_link_decorator():
     """Test linking the decorator between two methods.
