@@ -7,15 +7,13 @@ class MockLogClient(log.GarconLogger):
     domain = 'test_domain'
 
 
-"""Valid execution context
-"""
+# Valid execution context
 execution_context = {
     'execution.domain': 'dev',
     'execution.run_id': '123abc=',
     'execution.workflow_id': 'test-workflow-id'}
 
-"""Invalid execution context. Keys are incorrect
-"""
+# Invalid execution context. Keys are incorrect
 invalid_execution_context = {
     'abcd.domain': 'dev',
     '123.run_id': '123abc=',

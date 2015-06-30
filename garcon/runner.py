@@ -12,12 +12,13 @@ from concurrent.futures import ThreadPoolExecutor
 from garcon.task import flatten
 
 
-DEFAULT_TASK_TIMEOUT = 600  # 10 minutes.
-DEFAULT_TASK_HEARTBEAT = 600 # 10 minutes
+DEFAULT_TASK_TIMEOUT = 600   # 10 minutes.
+DEFAULT_TASK_HEARTBEAT = 600  # 10 minutes
 
 
 class NoRunnerRequirementsFound(Exception):
     pass
+
 
 class RunnerMissing(Exception):
     pass
@@ -65,8 +66,8 @@ class BaseRunner():
         looks at the largest heartbeat and set it up.
 
         Return:
-            str: The heartbeat timeout (boto requires the timeout to be a string
-                not a regular number.)
+            str: The heartbeat timeout (boto requires the timeout to be a
+                string not a regular number.)
         """
 
         heartbeat = 0
@@ -158,8 +159,8 @@ class External(BaseRunner):
 
         Args:
             timeout (int): activity timeout in seconds (mandatory)
-            heartbeat (int): heartbeat timeout in seconds, if not defined, it will
-                be equal to the timeout.
+            heartbeat (int): heartbeat timeout in seconds, if not defined, it
+                will be equal to the timeout.
         """
 
         assert timeout, 'External runner requires a timeout.'

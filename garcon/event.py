@@ -12,8 +12,8 @@ def activity_states_from_events(events):
 
     Note:
         Please note: from the list of events, only activities that have been
-        registered are accessible. For all the others that have not yet started,
-        they won't be part of this list.
+        registered are accessible. For all the others that have not yet
+        started, they won't be part of this list.
 
     Args:
         events (dict): list of all the events.

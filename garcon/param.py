@@ -88,7 +88,6 @@ class StaticParam(BaseParam):
             context (dict): execution context (not used.)
         """
 
-
         return self.value
 
 

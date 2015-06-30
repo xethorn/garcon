@@ -70,15 +70,15 @@ class DeciderWorker(swf.Decider):
         """
 
         execution_info = None
-        if 'workflowExecution' in poll and 'workflowId' in \
-                poll['workflowExecution'] and  'runId' in \
-                poll['workflowExecution']:
+        if ('workflowExecution' in poll and 'workflowId' in
+                poll['workflowExecution'] and 'runId' in
+                poll['workflowExecution']):
 
-            workflow_execution =  poll['workflowExecution']
+            workflow_execution = poll['workflowExecution']
             execution_info = {
-                'execution.domain' : self.domain,
-                'execution.workflow_id' : workflow_execution['workflowId'],
-                'execution.run_id' : workflow_execution['runId']
+                'execution.domain': self.domain,
+                'execution.workflow_id': workflow_execution['workflowId'],
+                'execution.run_id': workflow_execution['runId']
             }
 
         return execution_info
@@ -97,7 +97,6 @@ class DeciderWorker(swf.Decider):
         """
 
         return event.activity_states_from_events(history)
-
 
     def register(self):
         """Register the Workflow on SWF.
@@ -150,7 +149,7 @@ class DeciderWorker(swf.Decider):
 
         poll = self.poll()
 
-        if not 'events' in poll:
+        if 'events' not in poll:
             return True
 
         history = self.get_history(poll)
