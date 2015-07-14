@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import print_function
 try:
     from unittest.mock import MagicMock
 except:
@@ -27,16 +28,12 @@ def activity_run(
     monkeypatch.setattr(
         current_activity, 'execute_activity',
         execute or MagicMock(return_value=dict()))
-
-    monkeypatch.setattr(current_activity, 'poll',
-        MagicMock(return_value=poll))
-
-    monkeypatch.setattr(current_activity, 'complete',
-        complete or MagicMock())
-
-    monkeypatch.setattr(current_activity, 'fail',
-        fail or MagicMock())
-
+    monkeypatch.setattr(
+        current_activity, 'poll', MagicMock(return_value=poll))
+    monkeypatch.setattr(
+        current_activity, 'complete', complete or MagicMock())
+    monkeypatch.setattr(
+        current_activity, 'fail', fail or MagicMock())
     return current_activity
 
 
@@ -75,6 +72,23 @@ def test_run_activity(monkeypatch, poll):
     assert current_activity.poll.called
     assert current_activity.execute_activity.called
     assert current_activity.complete.called
+
+
+def test_run_capture_exception(monkeypatch, poll):
+    """Run an activity with an exception raised.
+    """
+
+    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity.on_exception = MagicMock()
+    current_activity.execute_activity = MagicMock()
+    current_activity.execute_activity.side_effect = Exception('Error')
+    current_activity.run()
+
+    assert current_activity.poll.called
+    assert current_activity.execute_activity.called
+    assert current_activity.on_exception.called
+    assert current_activity.fail.called
+    assert not current_activity.complete.called
 
 
 def test_run_activity_without_id(monkeypatch):
@@ -172,6 +186,7 @@ def test_hydrate_activity(monkeypatch):
         name='activity',
         domain='domain',
         requires=[],
+        on_exception=lambda actor, exception: print(exception),
         tasks=[lambda: dict('val')]))
 
 
@@ -330,7 +345,8 @@ def test_worker_run(monkeypatch):
     assert len(worker.activities) == 4
     for current_activity in worker.activities:
         # this check was originally `assert current_activity.run.called`
-        # for some reason this fails on py2.7, so we explicitly check for `called == 1`.
+        # for some reason this fails on py2.7, so we explicitly check for
+        # `called == 1`.
         assert current_activity.run.called == 1
 
 
@@ -339,7 +355,8 @@ def test_worker_run_with_skipped_activities(monkeypatch):
     """
 
     monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    monkeypatch.setattr(activity.Activity, 'run', MagicMock(return_value=False))
+    monkeypatch.setattr(
+        activity.Activity, 'run', MagicMock(return_value=False))
     from tests.fixtures.flows import example
 
     worker = activity.ActivityWorker(example, activities=['activity_1'])

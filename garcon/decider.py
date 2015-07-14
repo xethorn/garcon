@@ -32,6 +32,7 @@ class DeciderWorker(swf.Decider):
         self.version = getattr(flow, 'version', '1.0')
         self.activities = activity.find_workflow_activities(flow)
         self.task_list = flow.name
+        self.on_exception = getattr(flow, 'on_exception', None)
         super(DeciderWorker, self).__init__()
 
         if register:
@@ -109,10 +110,10 @@ class DeciderWorker(swf.Decider):
         registerables = []
         registerables.append(swf.Domain(name=self.domain))
         registerables.append(swf.WorkflowType(
-                domain=self.domain,
-                name=self.task_list,
-                version=self.version,
-                task_list=self.task_list))
+            domain=self.domain,
+            name=self.task_list,
+            version=self.version,
+            task_list=self.task_list))
 
         for current_activity in self.activities:
             registerables.append(
@@ -157,6 +158,8 @@ class DeciderWorker(swf.Decider):
                     decisions.complete_workflow_execution()
         except Exception as e:
             decisions.fail_workflow_execution(reason=str(e))
+            if self.on_exception:
+                self.on_exception(self, e)
 
     def delegate_decisions(self, decisions, decider, history, context):
         """Delegate the decisions.
@@ -189,6 +192,8 @@ class DeciderWorker(swf.Decider):
             pass
         except Exception as e:
             decisions.fail_workflow_execution(reason=str(e))
+            if self.on_exception:
+                self.on_exception(self, e)
 
     def run(self):
         """Run the decider.
@@ -332,8 +337,8 @@ def schedule(
 
             if states.get_last_state() != activity.ACTIVITY_FAILED:
                 continue
-            elif (not instance.retry or
-                    instance.retry < count_activity_failures(states)):
+            elif (not current.retry or
+                    current.retry < count_activity_failures(states)):
                 raise Exception(
                     'The activity failures has exceeded its retry limit.')
 

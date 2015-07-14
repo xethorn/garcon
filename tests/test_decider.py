@@ -30,6 +30,7 @@ def test_create_decider(monkeypatch):
     assert len(d.activities) == 4
     assert d.flow
     assert d.domain
+    assert d.on_exception
 
     monkeypatch.setattr(decider.DeciderWorker, 'register', MagicMock())
     d = decider.DeciderWorker(example)
