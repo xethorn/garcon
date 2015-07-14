@@ -36,3 +36,12 @@ activity_4 = create(
     tasks=runner.Sync(
         lambda activity, context:
             print('activity_4')))
+
+
+def on_exception(actor, exception):
+    """Handler for exceptions.
+
+    Useful if you use sentry or other similar systems.
+    """
+
+    print(exception)
