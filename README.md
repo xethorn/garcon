@@ -1,4 +1,4 @@
-garcon [![Build Status](https://travis-ci.org/xethorn/garcon.svg?branch=master)](https://travis-ci.org/xethorn/garcon)  [![Coverage Status](https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master)](https://coveralls.io/r/xethorn/garcon?branch=master)
+garcon [![Build Status](https://travis-ci.org/xethorn/garcon.svg)](https://travis-ci.org/xethorn/garcon)  [![Coverage Status](https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master)](https://coveralls.io/r/xethorn/garcon?branch=master)
 ======
 
 Lightweight library for AWS SWF.
