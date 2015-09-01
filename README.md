@@ -79,6 +79,10 @@ complex actions:
 - Task lists: You can programatically write a task list.
   ([see example](https://gist.github.com/mortaliorchard/6eca8a1723eea16ff2ac))
 
+Documentation
+-----------
+
+Full documentation (still in progress) available [here](http://garcon.readthedocs.org/)
 
 Application architecture
 ------------------------
