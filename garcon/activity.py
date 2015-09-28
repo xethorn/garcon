@@ -214,7 +214,7 @@ class ActivityInstance:
 
         AWS has a limit on the number of characters that can be used (32k). If
         you use the `task.decorate`, the data sent to the activity is optimized
-        to match the values of the context.
+        to match the values of the context as well as the execution context.
 
         Return:
             dict: the input to send to the activity.
@@ -227,6 +227,8 @@ class ActivityInstance:
                 value = self.global_context.get(requirement)
                 if value:
                     activity_input.update({requirement: value})
+
+            activity_input.update(self.execution_context.items())
 
         except runner.NoRunnerRequirementsFound:
             return self.global_context
