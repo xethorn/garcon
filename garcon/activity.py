@@ -264,7 +264,7 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
                 # activity to be updated – it throws an exception which stops
                 # the worker immediately.
                 try:
-                    self.fail(reason=str(error))
+                    self.fail(reason=str(error)[:255])
                     if self.on_exception:
                         self.on_exception(self, error)
                 except:
