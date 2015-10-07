@@ -41,7 +41,8 @@ def activity_states_from_events(events):
 
             activity_events.setdefault(
                 activity_name, {}).setdefault(
-                    activity_id, activity.ActivityState(activity_id)).add_state(
+                    activity_id,
+                    activity.ActivityState(activity_id)).add_state(
                         activity.ACTIVITY_SCHEDULED)
 
         elif event_type == 'ActivityTaskFailed':
@@ -92,7 +93,6 @@ def get_current_context(events):
     context = {}
 
     for event in events:
-        event_id = event.get('eventId')
         event_type = event.get('eventType')
         result = None
 

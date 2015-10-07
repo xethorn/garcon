@@ -492,7 +492,7 @@ class ActivityState:
             raise Exception('Result is ummutable – it should not be changed.')
         self._result = result
 
-    def wait():
+    def wait(self):
         """Wait until ready.
         """
 
