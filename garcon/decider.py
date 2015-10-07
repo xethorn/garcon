@@ -182,7 +182,12 @@ class DeciderWorker(swf.Decider):
             version=self.version)
 
         try:
-            decider(schedule=decider_schedule)
+            kwargs = dict(schedule=decider_schedule)
+
+            # retro-compatibility.
+            if 'context' in decider.__code__.co_varnames:
+                kwargs.update(context=context)
+            decider(**kwargs)
 
             # When no exceptions are raised and the method decider has returned
             # it means that there i nothing left to do in the current decider.
