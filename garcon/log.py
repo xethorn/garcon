@@ -70,7 +70,7 @@ def get_logger_namespace(execution_context):
     """
 
     return '.'.join([
-            LOGGER_PREFIX,
-            execution_context.get('execution.domain'),
-            execution_context.get('execution.workflow_id'),
-            execution_context.get('execution.run_id')])
+        LOGGER_PREFIX,
+        execution_context.get('execution.domain'),
+        execution_context.get('execution.workflow_id'),
+        execution_context.get('execution.run_id')])

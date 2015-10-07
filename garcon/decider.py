@@ -338,7 +338,7 @@ def schedule(
             if states.get_last_state() != activity.ACTIVITY_FAILED:
                 continue
             elif (not current.retry or
-                    current.retry < count_activity_failures(states)):
+                    current.retry < activity.count_activity_failures(states)):
                 raise Exception(
                     'The activity failures has exceeded its retry limit.')
 
