@@ -41,25 +41,6 @@ def test_create_decider(monkeypatch):
     assert not dec.register.called
 
 
-def test_get_workflow_execution_info(monkeypatch):
-    """Check that the workflow execution info are properly extracted
-    """
-
-    mock(monkeypatch)
-    from tests.fixtures.flows import example
-    from tests.fixtures import decider as poll
-
-    d = decider.DeciderWorker(example)
-
-    # Test extracting workflow execution info
-    assert d.get_workflow_execution_info(poll.history) == {
-        'execution.domain': 'dev',
-        'execution.run_id': '123abc=',
-        'execution.workflow_id': 'test-workflow-id'}
-
-    assert d.get_workflow_execution_info({}) is None
-
-
 def test_get_history(monkeypatch):
     """Test the decider history
     """

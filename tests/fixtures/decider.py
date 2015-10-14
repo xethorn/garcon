@@ -121,7 +121,7 @@ history = {'events': [
      'eventTimestamp': 1419351026.803,
      'eventType': 'DecisionTaskCompleted'},
     {'activityTaskCompletedEventAttributes': {
-        'scheduledEventId': 11, 'startedEventId': 16},
+        'scheduledEventId': 11, 'startedEventId': 16, 'result': '{"k": "v"}'},
      'eventId': 19,
      'eventTimestamp': 1419351026.932,
      'eventType': 'ActivityTaskCompleted'},

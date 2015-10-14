@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from garcon import activity
+from garcon import context
 import json
 
 
@@ -90,21 +91,5 @@ def get_current_context(events):
     """
 
     events = sorted(events, key=lambda item: item.get('eventId'))
-    context = {}
-
-    for event in events:
-        event_type = event.get('eventType')
-        result = None
-
-        if event_type == 'ActivityTaskCompleted':
-            attributes = event['activityTaskCompletedEventAttributes']
-            result = attributes.get('result')
-
-        if event_type == 'WorkflowExecutionStarted':
-            attributes = event['workflowExecutionStartedEventAttributes']
-            result = attributes.get('input')
-
-        if result:
-            context.update(json.loads(result))
-
-    return context
+    execution_context = context.ExecutionContext(events)
+    return execution_context
