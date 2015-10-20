@@ -18,6 +18,7 @@ Note:
 """
 
 import copy
+from functools import update_wrapper
 
 from garcon import param
 
@@ -183,6 +184,8 @@ def contextify(fn):
                 return response
 
             return namespace_result(response, namespace)
+
+        update_wrapper(wrapper, fn)
 
         # Keep a record of the requirements value. This allows us to trim the
         # size of the context sent to the activity as an input.
