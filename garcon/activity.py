@@ -228,10 +228,16 @@ class ActivityInstance:
                 if value:
                     activity_input.update({requirement: value})
 
-            activity_input.update(self.execution_context.items())
+            activity_input.update({
+                'execution.domain': self.global_context.get('execution.domain'),
+                'execution.run_id': self.global_context.get('execution.run_id'),
+                'execution.workflow_id': self.global_context.get(
+                    'execution.workflow_id')
+            })
 
         except runner.NoRunnerRequirementsFound:
             return self.global_context
+
         return activity_input
 
 
