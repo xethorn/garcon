@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='Garcon',
-    version='0.3.0',
+    version='0.3.1',
     url='https://github.com/xethorn/garcon/',
     author='Michael Ortali',
     author_email='hello@xethorn.net',
