@@ -592,6 +592,37 @@ def test_create_activity_instance_input_without_decorate(monkeypatch):
     assert resp.get('context') == 'yes'
 
 
+def test_create_activity_instance_input_with_zero_or_empty_values(
+        monkeypatch):
+    """Test the creation of a context for an activity instance input.
+    """
+
+    @task.decorate()
+    def task_a(value1, value2, value3, value4):
+        pass
+
+    activity_mock = MagicMock()
+    activity_mock.name = 'activity'
+    activity_mock.runner = runner.BaseRunner(
+        task_a.fill(
+            value1='zero',
+            value2='empty_list',
+            value3='empty_dict',
+            value4='none'))
+    instance = activity.ActivityInstance(
+        activity_mock,
+        local_context=dict(
+            zero=0, empty_list=[], empty_dict={}, none=None))
+
+    resp = instance.create_execution_input()
+
+    assert len(resp) == 6
+    assert resp.get('zero') == 0
+    assert resp.get('empty_list') == []
+    assert resp.get('empty_dict') == {}
+    assert 'none' not in resp
+
+
 def test_activity_state():
     """Test the creation of the activity state.
     """

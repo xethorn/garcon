@@ -225,7 +225,7 @@ class ActivityInstance:
         try:
             for requirement in self.runner.requirements(self.global_context):
                 value = self.global_context.get(requirement)
-                if value:
+                if value is not None:
                     activity_input.update({requirement: value})
 
             activity_input.update({
