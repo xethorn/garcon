@@ -1,6 +1,9 @@
 garcon [![Build Status](https://travis-ci.org/xethorn/garcon.svg)](https://travis-ci.org/xethorn/garcon)  [![Coverage Status](https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master)](https://coveralls.io/r/xethorn/garcon?branch=master)
 ======
 
+
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/b12b3c0af0084003bbae2a291aadc6e8)](https://www.codacy.com/app/github_14/garcon?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=xethorn/garcon&amp;utm_campaign=badger)
+
 Lightweight library for AWS SWF.
 
 > Garcon deals with easy going clients and kitchens. It takes orders
