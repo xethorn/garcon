@@ -12,6 +12,7 @@ from boto.swf.exceptions import SWFTypeAlreadyExistsError
 import boto.swf.layer2 as swf
 import functools
 import json
+import traceback
 
 from garcon import activity
 from garcon import event
@@ -196,7 +197,21 @@ class DeciderWorker(swf.Decider):
                 running process.
         """
 
-        poll = self.poll()
+        try:
+            poll = self.poll()
+        except Exception as error:
+            # Catch exceptions raised during poll() to avoid a Decider thread
+            # dying & the daemon unable to process subsequent workflows.
+            # AWS api limits on SWF calls are a common source of such
+            # exceptions.
+
+            # on_exception() can be overriden by the flow to send an alert
+            # when such an exception occurs.
+            if self.on_exception:
+                self.on_exception(self, error)
+            # todo: Add log exception
+            return True
+
         custom_decider = getattr(self.flow, 'decider', None)
 
         if 'events' not in poll:
@@ -223,7 +238,7 @@ class ScheduleContext:
     Schedule Context
     ================
 
-    The schedule context keeps track of all the current scheduling progress – 
+    The schedule context keeps track of all the current scheduling progress –
     which allows to easy determinate if there are more decisions to be taken
     or if the execution can be closed.
     """
