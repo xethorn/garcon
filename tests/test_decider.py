@@ -108,6 +108,24 @@ def test_running_workflow(monkeypatch):
     assert spy.called
 
 
+def test_running_workflow_exception(monkeypatch):
+    """Run a decider with an exception raised during poll.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    d = decider.DeciderWorker(example)
+    d.poll = MagicMock(return_value=decider_events.history)
+    d.complete = MagicMock()
+    d.create_decisions_from_flow = MagicMock()
+    d.poll.side_effect = Exception('test')
+    d.on_exception = MagicMock()
+    d.run()
+    assert d.on_exception.called
+    assert not d.complete.called
+
+
 def test_running_workflow_without_events(monkeypatch):
     """Test running a workflow without having any events.
     """
