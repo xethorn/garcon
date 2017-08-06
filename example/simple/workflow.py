@@ -23,7 +23,7 @@ def activity_failure(context, activity):
 
 
 test_activity_1 = create(
-    name='o',
+    name='activity_1',
     run=runner.Sync(
         lambda context, activity: logger.debug('activity_1')))
 
