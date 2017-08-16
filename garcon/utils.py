@@ -5,6 +5,7 @@ Utils
 """
 
 import hashlib
+import random
 
 
 def create_dictionary_key(dictionary):
@@ -29,3 +30,23 @@ def create_dictionary_key(dictionary):
         for (key, val) in sorted_dict])
 
     return hashlib.sha1(key_parts.encode('utf-8')).hexdigest()
+
+
+def exponential_backoff_delay(growth_factor, attempts, base=None):
+    """Calculate time to sleep based on exponential function.
+
+    base * growth_factor ^ (attempts - 1)
+
+    Args:
+        growth_factor (float): Initial sleep time of backoff.
+        attempts (int): Number of attempts that have been made already. More
+            attempts increases the time to sleep exponentially.
+        base (float): If passed sets base level sleep time. Otherwise defaults
+            to float between 1-2.
+    Return:
+        float: time in seconds to sleep between retries.
+    """
+
+    base = base or random.uniform(1, 2)
+    time_to_sleep = base * (growth_factor ** (attempts - 1))
+    return time_to_sleep

@@ -38,13 +38,15 @@ Create an activity::
 """
 
 from threading import Thread
+import boto.exception as boto_exception
 import boto.swf.layer2 as swf
 import itertools
 import json
+import time
 
 from garcon import log
-from garcon import utils
 from garcon import runner
+from garcon import utils
 
 
 ACTIVITY_STANDBY = 0
@@ -253,21 +255,37 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         previous activity is consumed (context).
         """
 
-        try:
-            activity_task = self.poll()
-        except Exception as error:
+        max_try = 5
+        for try_number in range(1, max_try+1):
+            try:
+                activity_task = self.poll()
             # Catch exceptions raised during poll() to avoid an Activity thread
-            # dying & worker daemon unable to process the affected Activity.
-            # AWS api limits on SWF calls are a common source of such
-            # exceptions (see https://github.com/xethorn/garcon/pull/75)
+            # dying and being unable to process an Activity.
+            except Exception as error:
+                # catching poll swf throttles, sleep, retry poll
+                # {'message': 'Rate exceeded', '__type':
+                # 'com.amazon.coral.availability#ThrottlingException'}
+                if (isinstance(error, boto_exception.SWFResponseError)
+                        and error.error_code == 'ThrottlingException'
+                        and try_number < max_try):
+                    sleep_time = utils.exponential_backoff_delay(
+                        2, try_number)
+                    self.logger.info(
+                        'Throttle Exception occurred on try {}. '
+                        'Sleeping for {} seconds'.format(
+                            try_number, sleep_time))
+                    time.sleep(sleep_time)
+                    try_number = try_number+1
+                    continue
+                # non swf throttle exception or max retries exceeded
 
-            # on_exception() can be overriden by the flow to send an alert
-            # when an exception occurs.
-            if self.on_exception:
-                self.on_exception(self, error)
-
-            self.logger.error(error, exc_info=True)
-            return True
+                # on_exception() can be overriden by the flow to send an alert
+                # when an exception occurs.
+                if self.on_exception:
+                    self.on_exception(self, error)
+                else:
+                    self.logger.error(error, exc_info=True)
+                return True
 
         packed_context = activity_task.get('input')
         context = dict()
