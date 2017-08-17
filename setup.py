@@ -21,7 +21,7 @@ setup(
     license='MIT',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['boto'],
+    install_requires=['boto', 'backoff'],
     zip_safe=False,
     classifiers=[
         'Programming Language :: Python :: 2.7',
