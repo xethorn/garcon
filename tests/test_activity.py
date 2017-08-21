@@ -14,6 +14,8 @@ from garcon import task
 from garcon import utils
 from tests.fixtures import decider
 
+import boto.exception as boto_exception
+
 
 def activity_run(
         monkeypatch, poll=None, complete=None, fail=None, execute=None):
@@ -60,6 +62,52 @@ def generators(request):
 @pytest.fixture
 def poll():
     return dict(activityId='something')
+
+
+def test_poll_for_activity(monkeypatch, poll=poll):
+    """Test that poll_for_activity successfully polls.
+    """
+
+    current_activity = activity_run(monkeypatch, poll)
+    current_activity.poll.return_value = 'foo'
+
+    activity_results = current_activity.poll_for_activity()
+    assert current_activity.poll.called
+    assert activity_results == 'foo'
+
+
+def test_poll_for_activity_throttle_retry(monkeypatch, poll=poll):
+    """Test that SWF throttles are retried during polling.
+    """
+
+    current_activity = activity_run(monkeypatch, poll)
+
+    response_status = 400
+    response_reason = 'Bad Request'
+    reponse_body = (
+        '{"__type": "com.amazon.coral.availability#ThrottlingException",'
+        '"message": "Rate exceeded"}')
+    json_body = json.loads(reponse_body)
+    exception = boto_exception.SWFResponseError(
+        response_status, response_reason, body=json_body)
+    current_activity.poll.side_effect = exception
+
+    with pytest.raises(boto_exception.SWFResponseError):
+        current_activity.poll_for_activity()
+    assert current_activity.poll.call_count == 5
+
+
+def test_poll_for_activity_error(monkeypatch, poll=poll):
+    """Test that non-throttle errors during poll are thrown.
+    """
+
+    current_activity = activity_run(monkeypatch, poll)
+
+    exception = Exception()
+    current_activity.poll.side_effect = exception
+
+    with pytest.raises(Exception):
+        current_activity.poll_for_activity()
 
 
 def test_run_activity(monkeypatch, poll):

@@ -29,3 +29,38 @@ def create_dictionary_key(dictionary):
         for (key, val) in sorted_dict])
 
     return hashlib.sha1(key_parts.encode('utf-8')).hexdigest()
+
+def non_throttle_error(swf_response_error):
+    """Activity Runner.
+
+    Determine whether SWF Exception was a throttle or a different error.
+
+    Args:
+        error: boto.exception.SWFResponseError instance.
+    Return:
+        bool: True if SWFResponseError was a throttle, False otherwise.
+    """
+
+    return swf_response_error.error_code != 'ThrottlingException'
+
+def throttle_backoff_handler(details):
+    """Callback to be used when a throttle backoff is invoked.
+
+    For more details see: https://github.com/litl/backoff/#event-handlers
+
+    Args:
+        dictionary (dict): Details of the backoff invocation. Valid keys
+            include:
+                target: reference to the function or method being invoked.
+                args: positional arguments to func.
+                kwargs: keyword arguments to func.
+                tries: number of invocation tries so far.
+                wait: seconds to wait (on_backoff handler only).
+                value: value triggering backoff (on_predicate decorator only).
+    """
+
+    activity = details['args'][0]
+    activity.logger.info(
+        'Throttle Exception occurred on try {}. '
+        'Sleeping for {} seconds'.format(
+            details['tries'], details['wait']))
