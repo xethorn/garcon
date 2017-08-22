@@ -11,7 +11,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='Garcon',
-    version='0.3.4',
+    version='0.3.5',
     url='https://github.com/xethorn/garcon/',
     author='Michael Ortali',
     author_email='hello@xethorn.net',
