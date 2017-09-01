@@ -88,9 +88,11 @@ Contributors
 -  Michael Ortali
 -  Adam Griffiths
 -  Raphael Antonmattei
+-  John Penner
 
 .. _xethorn: github.com/xethorn
 .. _rantonmattei: github.com/rantonmattei
+.. _someboredkiddo: github.com/someboredkiddo
 
 .. |Build Status| image:: https://travis-ci.org/xethorn/garcon.svg
    :target: https://travis-ci.org/xethorn/garcon
