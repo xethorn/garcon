@@ -179,7 +179,7 @@ class DeciderWorker(swf.Decider):
             if self.on_exception:
                 self.on_exception(self, e)
 
-    def run(self):
+    def run(self, identity=None):
         """Run the decider.
 
         The decider defines which task needs to be launched and when based on
@@ -192,13 +192,18 @@ class DeciderWorker(swf.Decider):
         If the decider is not able to find an uncompleted activity, the
         workflow can safely mark its execution as complete.
 
+        Args:
+            identity (str): Identity of the worker making the request, which
+                is recorded in the DecisionTaskStarted event in the AWS
+                console. This enables diagnostic tracing when problems arise.
+
         Return:
             boolean: Always return true, so any loop on run can act as a long
                 running process.
         """
 
         try:
-            poll = self.poll()
+            poll = self.poll(identity=identity)
         except Exception as error:
             # Catch exceptions raised during poll() to avoid a Decider thread
             # dying & the daemon unable to process subsequent workflows.
