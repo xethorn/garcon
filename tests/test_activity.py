@@ -110,6 +110,26 @@ def test_poll_for_activity_error(monkeypatch, poll=poll):
         current_activity.poll_for_activity()
 
 
+def test_poll_for_activity_identity(monkeypatch, poll=poll):
+    """Test that identity is passed to poll_for_activity.
+    """
+
+    current_activity = activity_run(monkeypatch, poll)
+
+    current_activity.poll_for_activity(identity='foo')
+    current_activity.poll.assert_called_with(identity='foo')
+
+
+def test_poll_for_activity_no_identity(monkeypatch, poll=poll):
+    """Test poll_for_activity works without identity passed as param.
+    """
+
+    current_activity = activity_run(monkeypatch, poll)
+
+    current_activity.poll_for_activity()
+    current_activity.poll.assert_called_with(identity=None)
+
+
 def test_run_activity(monkeypatch, poll):
     """Run an activity.
     """
@@ -117,7 +137,19 @@ def test_run_activity(monkeypatch, poll):
     current_activity = activity_run(monkeypatch, poll=poll)
     current_activity.run()
 
-    assert current_activity.poll.called
+    current_activity.poll.assert_called_with(identity=None)
+    assert current_activity.execute_activity.called
+    assert current_activity.complete.called
+
+
+def test_run_activity_identity(monkeypatch, poll):
+    """Run an activity with identity as param.
+    """
+
+    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity.run(identity='foo')
+
+    current_activity.poll.assert_called_with(identity='foo')
     assert current_activity.execute_activity.called
     assert current_activity.complete.called
 
@@ -456,14 +488,17 @@ def test_worker_infinite_loop():
         def __init__(self):
             self.count = 0
 
-        def run(self):
+        def run(self, identity=None):
             spy()
             self.count = self.count + 1
             if self.count < 5:
                 return True
             return False
 
-    activity.worker_runner(Activity())
+    activity_worker = Activity()
+    activity_worker.name = 'activity_name'
+    activity_worker.logger = MagicMock()
+    activity.worker_runner(activity_worker)
     assert spy.called
     assert spy.call_count == 5
 

@@ -37,12 +37,12 @@ Create an activity::
 
 """
 
-from threading import Thread
 import backoff
 import boto.exception as boto_exception
 import boto.swf.layer2 as swf
 import itertools
 import json
+import threading
 
 from garcon import log
 from garcon import utils
@@ -254,27 +254,39 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         giveup=utils.non_throttle_error,
         on_backoff=utils.throttle_backoff_handler,
         jitter=backoff.full_jitter)
-    def poll_for_activity(self):
+    def poll_for_activity(self, identity=None):
         """Runs Activity Poll.
 
         If a SWF throttling exception is raised during a poll, the poll will
         be retried up to 5 times using exponential backoff algorithm.
 
         Upgrading to boto3 would make this retry logic redundant.
+
+        Args:
+            identity (str): Identity of the worker making the request, which
+                is recorded in the ActivityTaskStarted event in the AWS
+                console. This enables diagnostic tracing when problems arise.
         """
 
-        return self.poll()
+        return self.poll(identity=identity)
 
-    def run(self):
+    def run(self, identity=None):
         """Activity Runner.
 
         Information is being pulled down from SWF and it checks if the Activity
         can be ran. As part of the information provided, the input of the
         previous activity is consumed (context).
+
+        Args:
+            activity_id (str): Identity of the worker making the request, which
+                is recorded in the ActivityTaskStarted event in the AWS
+                console. This enables diagnostic tracing when problems arise.
         """
 
         try:
-            activity_task = self.poll_for_activity()
+            if identity:
+                self.logger.debug('Polling with {}'.format(identity))
+            activity_task = self.poll_for_activity(identity)
         except Exception as error:
             # Catch exceptions raised during poll() to avoid an Activity thread
             # dying & worker daemon unable to process the affected Activity.
@@ -458,7 +470,7 @@ class ActivityWorker():
             if (self.worker_activities and
                     activity.name not in self.worker_activities):
                 continue
-            Thread(target=worker_runner, args=(activity,)).start()
+            threading.Thread(target=worker_runner, args=(activity,)).start()
 
 
 class ActivityState:
