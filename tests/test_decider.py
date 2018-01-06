@@ -108,6 +108,27 @@ def test_running_workflow(monkeypatch):
     assert spy.called
 
 
+def test_running_workflow_identity(monkeypatch):
+    """Test running a workflow with and without identity.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    d = decider.DeciderWorker(example)
+    d.poll = MagicMock()
+    d.complete = MagicMock()
+    d.create_decisions_from_flow = MagicMock()
+
+    # assert running decider without identity
+    d.run()
+    d.poll.assert_called_with(identity=None)
+
+    # assert running decider with identity
+    d.run('foo')
+    d.poll.assert_called_with(identity='foo')
+
+
 def test_running_workflow_exception(monkeypatch):
     """Run a decider with an exception raised during poll.
     """
