@@ -12,13 +12,13 @@ from boto.swf.exceptions import SWFTypeAlreadyExistsError
 import boto.swf.layer2 as swf
 import functools
 import json
-import traceback
 
 from garcon import activity
 from garcon import event
+from garcon import log
 
 
-class DeciderWorker(swf.Decider):
+class DeciderWorker(swf.Decider, log.GarconLogger):
 
     def __init__(self, flow, register=True):
         """Initialize the Decider Worker.
@@ -138,6 +138,7 @@ class DeciderWorker(swf.Decider):
             decisions.fail_workflow_execution(reason=str(e))
             if self.on_exception:
                 self.on_exception(self, e)
+            self.logger.error(e, exc_info=True)
 
     def delegate_decisions(self, decisions, decider, history, context):
         """Delegate the decisions.
@@ -178,6 +179,7 @@ class DeciderWorker(swf.Decider):
             decisions.fail_workflow_execution(reason=str(e))
             if self.on_exception:
                 self.on_exception(self, e)
+            self.logger.error(e, exc_info=True)
 
     def run(self, identity=None):
         """Run the decider.
@@ -214,7 +216,7 @@ class DeciderWorker(swf.Decider):
             # when such an exception occurs.
             if self.on_exception:
                 self.on_exception(self, error)
-            # todo: Add log exception
+            self.logger.error(error, exc_info=True)
             return True
 
         custom_decider = getattr(self.flow, 'decider', None)

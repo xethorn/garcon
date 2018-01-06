@@ -140,11 +140,41 @@ def test_running_workflow_exception(monkeypatch):
     d.poll = MagicMock(return_value=decider_events.history)
     d.complete = MagicMock()
     d.create_decisions_from_flow = MagicMock()
-    d.poll.side_effect = Exception('test')
+    exception = Exception('test')
+    d.poll.side_effect = exception
     d.on_exception = MagicMock()
+    d.logger.error = MagicMock()
     d.run()
     assert d.on_exception.called
+    d.logger.error.assert_called_with(exception, exc_info=True)
     assert not d.complete.called
+
+
+def test_create_decisions_from_flow_exception(monkeypatch):
+    """Test exception is raised and workflow fails when exception raised.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    decider_worker = decider.DeciderWorker(example)
+    decider_worker.logger.error = MagicMock()
+    decider_worker.on_exception = MagicMock()
+
+    exception = Exception('test')
+    monkeypatch.setattr(decider.activity,
+        'find_available_activities', MagicMock(side_effect = exception))
+
+    mock_decisions = MagicMock()
+    mock_activity_states = MagicMock()
+    mock_context = MagicMock()
+    decider_worker.create_decisions_from_flow(
+        mock_decisions, mock_activity_states, mock_context)
+
+    mock_decisions.fail_workflow_execution.assert_called_with(
+        reason=str(exception))
+    assert decider_worker.on_exception.called
+    decider_worker.logger.error.assert_called_with(exception, exc_info=True)
 
 
 def test_running_workflow_without_events(monkeypatch):
