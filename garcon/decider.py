@@ -17,6 +17,8 @@ from garcon import activity
 from garcon import event
 from garcon import log
 
+time_out_message = 'The activity with parameter fail_on_timeout has timed out.'
+
 
 class DeciderWorker(swf.Decider, log.GarconLogger):
 
@@ -35,6 +37,10 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         self.task_list = flow.name
         self.on_exception = getattr(flow, 'on_exception', None)
         super(DeciderWorker, self).__init__()
+
+        self.activities_fail_on_timeout = [
+            single_activity.name for single_activity in self.activities
+            if single_activity.fail_on_timeout]
 
         if register:
             self.register()
@@ -229,6 +235,15 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         current_context = event.get_current_context(history)
         current_context.set_workflow_execution_info(poll, self.domain)
 
+        if self.activities_fail_on_timeout:
+            try:
+                self.fail_workflow_on_activity_timeout(history)
+            except Exception as error:
+                if self.on_exception:
+                    self.on_exception(self, error)
+                self.logger.error(error, exc_info=True)
+                return True
+
         decisions = swf.Layer1Decisions()
         if not custom_decider:
             self.create_decisions_from_flow(
@@ -238,6 +253,47 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
                 decisions, custom_decider, activity_states, current_context)
         self.complete(decisions=decisions)
         return True
+
+    def fail_workflow_on_activity_timeout(self, history):
+        """Find timed-out activities and check if they failing on time-out.
+
+        This function filters ordinary timed out activities and the ones
+        that has fail_on_timeout attribute set to True. If such activity is
+        found in history of events, whole workflow should be considerate
+        as failed.
+
+        Args:
+            history (list): list of events polled from the AWS SWF.
+        """
+
+        for single_event in history[::-1]:
+            if single_event['eventType'] == 'ActivityTaskTimedOut' and (
+                    self.is_activity_fail_on_timeout(single_event, history)):
+                decision = swf.Layer1Decisions()
+                decision.fail_workflow_execution(reason=time_out_message)
+                self.complete(decisions=decision)
+                raise Exception(time_out_message)
+
+    def is_activity_fail_on_timeout(self, time_out_event, history):
+        """Check if activity is on the list of failing on timeout activities.
+
+        Args:
+            time_out_event (dict): single event from events history.
+            history (list): list of events polled from AWS SWF.
+
+        Return:
+            boolean: return result of activity condition check.
+        """
+
+        target_id = (
+            time_out_event[
+                'activityTaskTimedOutEventAttributes']['scheduledEventId'])
+        for target_event in history[::-1]:
+            if target_id == target_event['eventId']:
+                activity_name = target_event[
+                    'activityTaskScheduledEventAttributes'][
+                    'activityType']['name']
+                return activity_name in self.activities_fail_on_timeout
 
 
 class ScheduleContext:

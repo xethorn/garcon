@@ -10,6 +10,7 @@ import pytest
 from garcon import decider
 from garcon import activity
 from tests.fixtures import decider as decider_events
+from tests.fixtures import history as time_out_history
 
 
 def mock(monkeypatch):
@@ -39,6 +40,95 @@ def test_create_decider(monkeypatch):
     monkeypatch.setattr(decider.DeciderWorker, 'register', MagicMock())
     dec = decider.DeciderWorker(example, register=False)
     assert not dec.register.called
+
+
+def test_is_activity_fail_on_timeout(monkeypatch):
+    """Test failed activity validator behaviour.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    monkeypatch.setattr(
+        decider.DeciderWorker, '__init__', lambda self, *args, **kwargs: None)
+    d = decider.DeciderWorker(example)
+    d.activities_fail_on_timeout = (
+        time_out_history.critical_activity_namelist)
+
+    event = time_out_history.time_out_event
+    history = time_out_history.history
+
+    result = d.is_activity_fail_on_timeout(event, history)
+    assert result is True
+
+
+def test_is_activity_fail_on_timeout_fail(monkeypatch):
+    """Test failed activity validator behaviour in case of fail.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    monkeypatch.setattr(
+        decider.DeciderWorker, '__init__', lambda self, *args, **kwargs: None)
+    d = decider.DeciderWorker(example)
+    d.activities_fail_on_timeout = []
+
+    event = time_out_history.time_out_event
+    history = time_out_history.history
+
+    result = d.is_activity_fail_on_timeout(event, history)
+    assert result is False
+
+    d.activities_fail_on_timeout = time_out_history.not_timed_out_activity
+    result = d.is_activity_fail_on_timeout(event, history)
+    assert result is False
+
+
+def test_is_there_timed_out_activities(monkeypatch):
+    """Test timed out activities seeker behaviour.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    monkeypatch.setattr(
+        decider.DeciderWorker, '__init__', lambda self, *args, **kwargs: None)
+    monkeypatch.setattr(
+        decider.DeciderWorker, 'is_activity_fail_on_timeout',
+        lambda self, *args, **kwargs: None)
+    d = decider.DeciderWorker(example)
+
+    history = time_out_history.history
+
+    result = d.fail_workflow_on_activity_timeout(history)
+    assert result is None
+
+
+def test_is_there_timed_out_activities_fail(monkeypatch):
+    """Test timed out activities seeker behaviour in case of fail.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    monkeypatch.setattr(
+        decider.DeciderWorker, '__init__', lambda self, *args, **kwargs: None)
+    monkeypatch.setattr(
+        decider.DeciderWorker, 'is_activity_fail_on_timeout',
+        lambda self, *args, **kwargs: True)
+
+    d = decider.DeciderWorker(example)
+
+    monkeypatch.setattr(swf, 'Layer1Decisions', MagicMock())
+    monkeypatch.setattr(decider.DeciderWorker, 'complete', MagicMock())
+    history = time_out_history.history
+
+    with pytest.raises(Exception):
+        d.fail_workflow_on_activity_timeout(history)
+
+    assert d.complete.called
+    assert swf.Layer1Decisions.called
 
 
 def test_get_history(monkeypatch):
@@ -150,6 +240,29 @@ def test_running_workflow_exception(monkeypatch):
     assert not d.complete.called
 
 
+def test_running_workflow_time_out_exception(monkeypatch):
+    """Run a decider with an exception raised during fail on timeout check.
+    """
+
+    mock(monkeypatch)
+    from tests.fixtures.flows import example
+
+    d = decider.DeciderWorker(example)
+    d.poll = MagicMock(return_value=decider_events.history)
+    d.complete = MagicMock()
+    d.on_exception = MagicMock()
+    d.logger.error = MagicMock()
+    d.activities_fail_on_timeout = True
+    exception = Exception('test')
+    d.fail_workflow_on_activity_timeout = MagicMock()
+    d.fail_workflow_on_activity_timeout.side_effect = exception
+
+    d.run()
+    assert d.on_exception.called
+    d.logger.error.assert_called_with(exception, exc_info=True)
+    assert not d.complete.called
+
+
 def test_create_decisions_from_flow_exception(monkeypatch):
     """Test exception is raised and workflow fails when exception raised.
     """
@@ -163,7 +276,7 @@ def test_create_decisions_from_flow_exception(monkeypatch):
 
     exception = Exception('test')
     monkeypatch.setattr(decider.activity,
-        'find_available_activities', MagicMock(side_effect = exception))
+        'find_available_activities', MagicMock(side_effect=exception))
 
     mock_decisions = MagicMock()
     mock_activity_states = MagicMock()

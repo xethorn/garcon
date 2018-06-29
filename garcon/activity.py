@@ -246,6 +246,7 @@ class ActivityInstance:
 class Activity(swf.ActivityWorker, log.GarconLogger):
     version = '1.0'
     task_list = None
+    fail_on_timeout = None
 
     @backoff.on_exception(
         backoff.expo,
@@ -367,6 +368,8 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
 
         self.generators = getattr(
             self, 'generators', None) or data.get('generators')
+
+        self.fail_on_timeout = data.get('fail_on_timeout')
 
     def instances(self, context):
         """Get all instances for one activity based on the current context.
@@ -608,7 +611,8 @@ def create(domain, name, version='1.0', on_exception=None):
             tasks=options.get('tasks'),
             run=options.get('run'),
             schedule_to_start=options.get('schedule_to_start'),
-            on_exception=options.get('on_exception') or on_exception))
+            on_exception=options.get('on_exception') or on_exception,
+            fail_on_timeout=options.get('fail_on_timeout')))
         return activity
     return wrapper
 
