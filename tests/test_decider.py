@@ -3,7 +3,6 @@ try:
     from unittest.mock import MagicMock
 except:
     from mock import MagicMock
-import boto.swf.layer2 as swf
 import json
 import pytest
 
@@ -12,21 +11,14 @@ from garcon import activity
 from tests.fixtures import decider as decider_events
 
 
-def mock(monkeypatch):
-    for base in [swf.Decider, swf.WorkflowType, swf.ActivityType, swf.Domain]:
-        monkeypatch.setattr(base, '__init__', MagicMock(return_value=None))
-        if base is not swf.Decider:
-            monkeypatch.setattr(base, 'register', MagicMock())
-
-
 def test_create_decider(monkeypatch):
     """Create a decider and check the behavior of the registration.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     d = decider.DeciderWorker(example)
+    assert d.client
     assert len(d.activities) == 4
     assert d.flow
     assert d.domain
@@ -45,7 +37,6 @@ def test_get_history(monkeypatch):
     """Test the decider history
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     events = decider_events.history.get('events')
@@ -53,13 +44,19 @@ def test_get_history(monkeypatch):
     events = events[:half * 2]
     pool_1 = events[half:]
     pool_2 = events[:half]
+    identity = 'identity'
 
     d = decider.DeciderWorker(example)
-    d.poll = MagicMock(return_value={'events': pool_2})
+    d.client.poll_for_decision_task = MagicMock(return_value={'events': pool_2})
 
-    resp = d.get_history({'events': pool_1, 'nextPageToken': 'nextPage'})
+    resp = d.get_history(
+        identity, {'events': pool_1, 'nextPageToken': 'nextPage'})
 
-    d.poll.assert_called_with(next_page_token='nextPage')
+    d.client.poll_for_decision_task.assert_called_with(
+        domain=example.domain,
+        next_page_token='nextPage',
+        identity=identity,
+        taskList=dict(name=d.task_list))
     assert len(resp) == len([
         evt for evt in events if evt['eventType'].startswith('Decision')])
 
@@ -68,12 +65,12 @@ def test_get_activity_states(monkeypatch):
     """Test get activity states from history.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
+    identity= 'identity'
     events = decider_events.history.get('events')
     d = decider.DeciderWorker(example)
-    history = d.get_history({'events': events})
+    history = d.get_history(identity, {'events': events})
     states = d.get_activity_states(history)
 
     for activity_name, activity_instances in states.items():
@@ -85,11 +82,12 @@ def test_running_workflow(monkeypatch):
     """Test running a workflow.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
-    d = decider.DeciderWorker(example)
-    d.poll = MagicMock(return_value=decider_events.history)
+    d = decider.DeciderWorker(example, register=False)
+    d.client.poll_for_decision_task = MagicMock(
+        return_value=decider_events.history)
+    d.client.respond_decision_task_completed = MagicMock()
     d.complete = MagicMock()
     d.create_decisions_from_flow = MagicMock()
 
@@ -112,36 +110,41 @@ def test_running_workflow_identity(monkeypatch):
     """Test running a workflow with and without identity.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
-    d = decider.DeciderWorker(example)
-    d.poll = MagicMock()
+    d = decider.DeciderWorker(example, register=False)
+    d.client.poll_for_decision_task = MagicMock()
     d.complete = MagicMock()
     d.create_decisions_from_flow = MagicMock()
 
     # assert running decider without identity
     d.run()
-    d.poll.assert_called_with(identity=None)
+    d.client.poll_for_decision_task.assert_called_with(
+        domain=d.domain,
+        taskList=dict(name=d.task_list),
+        identity='')
 
     # assert running decider with identity
     d.run('foo')
-    d.poll.assert_called_with(identity='foo')
+    d.client.poll_for_decision_task.assert_called_with(
+        domain=d.domain,
+        taskList=dict(name=d.task_list),
+        identity='foo')
 
 
 def test_running_workflow_exception(monkeypatch):
     """Run a decider with an exception raised during poll.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
-    d = decider.DeciderWorker(example)
-    d.poll = MagicMock(return_value=decider_events.history)
+    d = decider.DeciderWorker(example, register=False)
+    d.client.poll_for_decision_task = MagicMock(
+        return_value=decider_events.history)
     d.complete = MagicMock()
     d.create_decisions_from_flow = MagicMock()
     exception = Exception('test')
-    d.poll.side_effect = exception
+    d.client.poll_for_decision_task.side_effect = exception
     d.on_exception = MagicMock()
     d.logger.error = MagicMock()
     d.run()
@@ -154,10 +157,9 @@ def test_create_decisions_from_flow_exception(monkeypatch):
     """Test exception is raised and workflow fails when exception raised.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
-    decider_worker = decider.DeciderWorker(example)
+    decider_worker = decider.DeciderWorker(example, register=False)
     decider_worker.logger.error = MagicMock()
     decider_worker.on_exception = MagicMock()
 
@@ -165,14 +167,17 @@ def test_create_decisions_from_flow_exception(monkeypatch):
     monkeypatch.setattr(decider.activity,
         'find_available_activities', MagicMock(side_effect = exception))
 
-    mock_decisions = MagicMock()
+    decisions = []
     mock_activity_states = MagicMock()
     mock_context = MagicMock()
     decider_worker.create_decisions_from_flow(
-        mock_decisions, mock_activity_states, mock_context)
+        decisions, mock_activity_states, mock_context)
 
-    mock_decisions.fail_workflow_execution.assert_called_with(
-        reason=str(exception))
+    failed_execution = dict(
+        decisionType='FailWorkflowExecution',
+        failWorkflowExecutionDecisionAttributes=dict(reason=str(exception)))
+
+    assert failed_execution in decisions
     assert decider_worker.on_exception.called
     decider_worker.logger.error.assert_called_with(exception, exc_info=True)
 
@@ -181,11 +186,10 @@ def test_running_workflow_without_events(monkeypatch):
     """Test running a workflow without having any events.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
-    d = decider.DeciderWorker(example)
-    d.poll = MagicMock(return_value={})
+    d = decider.DeciderWorker(example, register=False)
+    d.client.poll_for_decision_task = MagicMock(return_value={})
     d.get_history = MagicMock()
     d.run()
 
@@ -207,7 +211,6 @@ def test_schedule_with_unscheduled_activity(monkeypatch):
     """Test the scheduling of an activity.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     monkeypatch.setattr(decider, 'schedule_activity_task', MagicMock())
@@ -229,7 +232,6 @@ def test_schedule_with_scheduled_activity(monkeypatch):
     """Test the scheduling of an activity.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     monkeypatch.setattr(decider, 'schedule_activity_task', MagicMock())
@@ -261,7 +263,6 @@ def test_schedule_with_completed_activity(monkeypatch):
     """Test the scheduling of an activity.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     monkeypatch.setattr(decider, 'schedule_activity_task', MagicMock())
@@ -306,65 +307,74 @@ def test_schedule_activity_task(monkeypatch):
     """Test scheduling an activity task.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     instance = list(example.activity_1.instances({}))[0]
-    decisions = MagicMock()
+    decisions = []
     decider.schedule_activity_task(decisions, instance)
-    decisions.schedule_activity_task.assert_called_with(
-        instance.id,
-        instance.activity_name,
-        '1.0',
-        task_list=instance.activity_worker.task_list,
-        input=json.dumps(instance.create_execution_input()),
-        heartbeat_timeout=str(instance.heartbeat_timeout),
-        start_to_close_timeout=str(instance.timeout),
-        schedule_to_start_timeout=str(instance.schedule_to_start),
-        schedule_to_close_timeout=str(instance.schedule_to_close))
+    expects = dict(
+        decisionType='ScheduleActivityTask',
+        scheduleActivityTaskDecisionAttributes=dict(
+            activityId=instance.id,
+            activityType=dict(
+                name=instance.activity_name,
+                version='1.0'),
+            taskList=dict(name=instance.activity_worker.task_list),
+            input=json.dumps(instance.create_execution_input()),
+            heartbeatTimeout=str(instance.heartbeat_timeout),
+            startToCloseTimeout=str(instance.timeout),
+            scheduleToStartTimeout=str(instance.schedule_to_start),
+            scheduleToCloseTimeout=str(instance.schedule_to_close)))
+    assert expects in decisions
 
 
 def test_schedule_activity_task_with_version(monkeypatch):
     """Test scheduling an activity task with a version.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     instance = list(example.activity_1.instances({}))[0]
-    decisions = MagicMock()
+    decisions = []
     version = '2.0'
     decider.schedule_activity_task(decisions, instance, version=version)
-    decisions.schedule_activity_task.assert_called_with(
-        instance.id,
-        instance.activity_name,
-        version,
-        task_list=instance.activity_worker.task_list,
-        input=json.dumps(instance.create_execution_input()),
-        heartbeat_timeout=str(instance.heartbeat_timeout),
-        start_to_close_timeout=str(instance.timeout),
-        schedule_to_start_timeout=str(instance.schedule_to_start),
-        schedule_to_close_timeout=str(instance.schedule_to_close))
+    expects = dict(
+        decisionType='ScheduleActivityTask',
+        scheduleActivityTaskDecisionAttributes=dict(
+            activityId=instance.id,
+            activityType=dict(
+                name=instance.activity_name,
+                version=version),
+            taskList=dict(name=instance.activity_worker.task_list),
+            input=json.dumps(instance.create_execution_input()),
+            heartbeatTimeout=str(instance.heartbeat_timeout),
+            startToCloseTimeout=str(instance.timeout),
+            scheduleToStartTimeout=str(instance.schedule_to_start),
+            scheduleToCloseTimeout=str(instance.schedule_to_close)))
+    assert expects in decisions
 
 
-def test_schedule_activity_task_with_version(monkeypatch):
+def test_schedule_activity_task_with_custom_id(monkeypatch):
     """Test scheduling an activity task with a custom id.
     """
 
-    mock(monkeypatch)
     from tests.fixtures.flows import example
 
     instance = list(example.activity_1.instances({}))[0]
-    decisions = MagicMock()
+    decisions = []
     custom_id = 'special_id'
     decider.schedule_activity_task(decisions, instance, id=custom_id)
-    decisions.schedule_activity_task.assert_called_with(
-        custom_id,
-        instance.activity_name,
-        '1.0',
-        task_list=instance.activity_worker.task_list,
-        input=json.dumps(instance.create_execution_input()),
-        heartbeat_timeout=str(instance.heartbeat_timeout),
-        start_to_close_timeout=str(instance.timeout),
-        schedule_to_start_timeout=str(instance.schedule_to_start),
-        schedule_to_close_timeout=str(instance.schedule_to_close))
+    expects = dict(
+        decisionType='ScheduleActivityTask',
+        scheduleActivityTaskDecisionAttributes=dict(
+            activityId=custom_id,
+            activityType=dict(
+                name=instance.activity_name,
+                version='1.0'),
+            taskList=dict(name=instance.activity_worker.task_list),
+            input=json.dumps(instance.create_execution_input()),
+            heartbeatTimeout=str(instance.heartbeat_timeout),
+            startToCloseTimeout=str(instance.timeout),
+            scheduleToStartTimeout=str(instance.schedule_to_start),
+            scheduleToCloseTimeout=str(instance.schedule_to_close)))
+    assert expects in decisions

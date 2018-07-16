@@ -3,10 +3,12 @@ from __future__ import print_function
 from garcon import activity
 from garcon import runner
 
+import boto3
 
+client = boto3.client('swf', region_name='us-east-1')
 domain = 'dev'
 name = 'workflow_name'
-create = activity.create(domain, name)
+create = activity.create(client, domain, name)
 
 activity_1 = create(
     name='activity_1',
