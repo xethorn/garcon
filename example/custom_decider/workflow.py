@@ -9,21 +9,20 @@ coffee shop.
 Workflow:
     1. Enter in the coffee shop.
     2. Order.
-        2.1 Chocolate chip cookie.
-        2.2 Coffee.
+        2.1 Coffee.
+        2.2 Chocolate chip cookie.
     3. Finalize the order (any of the activites below can be done in any order)
         3.1 Pays.
         3.2 Get the order.
     4. Leave the coffee shop.
 
 Result:
-
-entering coffee shop
-ordering: coffee
-ordering: chocolate_chip_cookie
-pay $6.98
-get order
-leaving the coffee shop
+    entering coffee shop
+    ordering: coffee
+    ordering: chocolate_chip_cookie
+    pay $6.98
+    get order
+    leaving the coffee shop
 """
 
 from garcon import activity
@@ -33,7 +32,7 @@ from garcon import task
 
 class Workflow:
 
-    def __init__(self, domain, name):
+    def __init__(self, client, domain, name):
         """Create the workflow.
 
         Args:
@@ -42,7 +41,8 @@ class Workflow:
         """
         self.name = name
         self.domain = domain
-        self.create_activity = activity.create(domain, name)
+        self.client = client
+        self.create_activity = activity.create(client, domain, name)
 
     def decider(self, schedule, context=None):
         """Custom deciders.

@@ -1,6 +1,6 @@
 backoff==1.4.3
-boto==2.35.1
-pytest-cov==1.8.1
-pytest==2.6.4
+boto3==1.7.58
+pytest-cov==2.5.1
+pytest==3.6.3
 python-coveralls==2.4.3
 tox==2.9.1

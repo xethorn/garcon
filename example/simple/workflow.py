@@ -1,16 +1,15 @@
-import boto.swf.layer2 as swf
-
 from garcon import activity
 from garcon import runner
+import boto3
 import logging
 import random
 
 
 logger = logging.getLogger(__name__)
-
+client = boto3.client('swf', region_name='us-east-1')
 domain = 'dev'
 name = 'workflow_sample'
-create = activity.create(domain, name)
+create = activity.create(client, domain, name)
 
 
 def activity_failure(context, activity):
@@ -18,8 +17,7 @@ def activity_failure(context, activity):
     if num != 3:
         logger.warn('activity_3: fails')
         raise Exception('fails')
-
-    print('activity_3: end')
+    logger.debug('activity_3: end')
 
 
 test_activity_1 = create(
