@@ -10,8 +10,8 @@ Lightweight library for AWS SWF.
 Requirements
 ~~~~~~~~~~~~
 
--  Python 2.7, 3.4 (tested)
--  Boto 2.34.0 (tested)
+-  Python 2.7, 3.4, 3.5, 3.6, 3.7 (tested)
+-  Boto3 (tested)
 
 Goal
 ~~~~
@@ -35,13 +35,15 @@ be completed.
 
     from __future__ import print_function
 
+    import boto3
     from garcon import activity
     from garcon import runner
 
+    client = boto3.client('swf', region_name='us-east-1')
 
     domain = 'dev'
     name = 'workflow_sample'
-    create = activity.create(domain, name)
+    create = activity.create(client, domain, name)
 
     test_activity_1 = create(
         name='activity_1',

@@ -7,18 +7,15 @@ The decider worker is focused on orchestrating which activity needs to be
 executed and when based on the flow procided.
 """
 
-from boto.swf.exceptions import SWFDomainAlreadyExistsError
-from boto.swf.exceptions import SWFTypeAlreadyExistsError
-import boto.swf.layer2 as swf
 import functools
 import json
+import uuid
 
 from garcon import activity
 from garcon import event
 from garcon import log
 
-
-class DeciderWorker(swf.Decider, log.GarconLogger):
+class DeciderWorker(log.GarconLogger):
 
     def __init__(self, flow, register=True):
         """Initialize the Decider Worker.
@@ -28,18 +25,18 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
             register (boolean): If this flow needs to be register on AWS.
         """
 
+        self.client = flow.client
         self.flow = flow
         self.domain = flow.domain
         self.version = getattr(flow, 'version', '1.0')
         self.activities = activity.find_workflow_activities(flow)
         self.task_list = flow.name
         self.on_exception = getattr(flow, 'on_exception', None)
-        super(DeciderWorker, self).__init__()
 
         if register:
             self.register()
 
-    def get_history(self, poll):
+    def get_history(self, identity, poll):
         """Get all the history.
 
         The full history needs to be recovered from SWF to make sure that all
@@ -47,6 +44,7 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         100 events are provided, this methods retrieves all events.
 
         Args:
+            identity (string): The identity of the decider that pulls the information.
             poll (object): The poll object (see AWS SWF for details.)
         Return:
             list: All the events.
@@ -54,14 +52,17 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
 
         events = poll['events']
         while 'nextPageToken' in poll:
-            poll = self.poll(next_page_token=poll['nextPageToken'])
+            poll = self.client.poll_for_decision_task(
+                domain=self.domain,
+                identity=identity,
+                taskList=dict(name=self.task_list),
+                next_page_token=poll['nextPageToken'])
 
             if 'events' in poll:
                 events += poll['events']
 
         # Remove all the events that are related to decisions and only.
         return [e for e in events if not e['eventType'].startswith('Decision')]
-
 
     def get_activity_states(self, history):
         """Get the activity states from the history.
@@ -86,28 +87,31 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         """
 
         registerables = []
-        registerables.append(swf.Domain(name=self.domain))
-        registerables.append(swf.WorkflowType(
-            domain=self.domain,
-            name=self.task_list,
-            version=self.version,
-            task_list=self.task_list))
+        registerables.append((
+            self.client.register_domain,
+            dict(name=self.domain,
+                 workflowExecutionRetentionPeriodInDays='90')))
+        registerables.append((
+            self.client.register_workflow_type,
+            dict(
+                domain=self.domain,
+                name=self.task_list,
+                version=self.version)))
 
         for current_activity in self.activities:
-            registerables.append(
-                swf.ActivityType(
+            registerables.append((
+                self.client.register_activity_type,
+                dict(
                     domain=self.domain,
                     name=current_activity.name,
-                    version=self.version,
-                    task_list=current_activity.task_list))
+                    version=self.version)))
 
-        for swf_entity in registerables:
+        for callable, data in registerables:
             try:
-                swf_entity.register()
-            except (SWFDomainAlreadyExistsError, SWFTypeAlreadyExistsError):
-                print(
-                    swf_entity.__class__.__name__, swf_entity.name,
-                    'already exists')
+                callable(**data)
+            except Exception as e:
+                print(e)
+                print(data.get('name'), 'already exists')
 
     def create_decisions_from_flow(self, decisions, activity_states, context):
         """Create the decisions from the flow.
@@ -117,7 +121,7 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         to schedule is thus very straightforward.
 
         Args:
-            decisions (Layer1Decisions): the layer decision for swf.
+            decisions (list): the layer decision for swf.
             activity_states (dict): all the state activities.
             context (dict): the context of the activities.
         """
@@ -125,7 +129,6 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         try:
             for current in activity.find_available_activities(
                     self.flow, activity_states, context.current):
-
                 schedule_activity_task(
                     decisions, current, version=self.version)
             else:
@@ -133,9 +136,13 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
                     activity.find_uncomplete_activities(
                         self.flow, activity_states, context.current))
                 if not activities:
-                    decisions.complete_workflow_execution()
+                    decisions.append(dict(
+                        decisionType='CompleteWorkflowExecution'))
         except Exception as e:
-            decisions.fail_workflow_execution(reason=str(e))
+            decisions.append(dict(
+                decisionType='FailWorkflowExecution',
+                failWorkflowExecutionDecisionAttributes=dict(
+                    reason=str(e))))
             if self.on_exception:
                 self.on_exception(self, e)
             self.logger.error(e, exc_info=True)
@@ -149,7 +156,7 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         and if scheduled, returns its result.
 
         Args:
-            decisions (Layer1Decisions): the layer decision for swf.
+            decisions (list): the layer decision for swf.
             decider (callable): the decider (it needs to have schedule)
             history (dict): all the state activities and its history.
             context (dict): the context of the activities.
@@ -172,11 +179,15 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
             # When no exceptions are raised and the method decider has returned
             # it means that there i nothing left to do in the current decider.
             if schedule_context.completed:
-                decisions.complete_workflow_execution()
+                decisions.append(dict(
+                    decisionType='CompleteWorkflowExecution'))
         except activity.ActivityInstanceNotReadyException:
             pass
         except Exception as e:
-            decisions.fail_workflow_execution(reason=str(e))
+            decisions.append(dict(
+                decisionType='FailWorkflowExecution',
+                failWorkflowExecutionDecisionAttributes=dict(
+                    reason=str(e))))
             if self.on_exception:
                 self.on_exception(self, e)
             self.logger.error(e, exc_info=True)
@@ -205,7 +216,10 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         """
 
         try:
-            poll = self.poll(identity=identity)
+            poll = self.client.poll_for_decision_task(
+                domain=self.domain,
+                taskList=dict(name=self.task_list),
+                identity=identity or '')
         except Exception as error:
             # Catch exceptions raised during poll() to avoid a Decider thread
             # dying & the daemon unable to process subsequent workflows.
@@ -224,19 +238,21 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         if 'events' not in poll:
             return True
 
-        history = self.get_history(poll)
+        history = self.get_history(identity, poll)
         activity_states = self.get_activity_states(history)
         current_context = event.get_current_context(history)
         current_context.set_workflow_execution_info(poll, self.domain)
 
-        decisions = swf.Layer1Decisions()
+        decisions = []
         if not custom_decider:
             self.create_decisions_from_flow(
                 decisions, activity_states, current_context)
         else:
             self.delegate_decisions(
                 decisions, custom_decider, activity_states, current_context)
-        self.complete(decisions=decisions)
+        self.client.respond_decision_task_completed(
+            taskToken=poll.get('taskToken'),
+            decisions=decisions)
         return True
 
 
@@ -277,16 +293,19 @@ def schedule_activity_task(
         id (str): optional id of the activity instance.
     """
 
-    decisions.schedule_activity_task(
-        id or instance.id,
-        instance.activity_name,
-        version,
-        task_list=instance.activity_worker.task_list,
-        input=json.dumps(instance.create_execution_input()),
-        heartbeat_timeout=str(instance.heartbeat_timeout),
-        start_to_close_timeout=str(instance.timeout),
-        schedule_to_start_timeout=str(instance.schedule_to_start),
-        schedule_to_close_timeout=str(instance.schedule_to_close))
+    decisions.append(dict(
+        decisionType='ScheduleActivityTask',
+        scheduleActivityTaskDecisionAttributes=dict(
+            activityId=id or instance.id,
+            activityType=dict(
+                name=instance.activity_name,
+                version=version),
+            taskList=dict(name=instance.activity_worker.task_list),
+            input=json.dumps(instance.create_execution_input()),
+            heartbeatTimeout=str(instance.heartbeat_timeout),
+            startToCloseTimeout=str(instance.timeout),
+            scheduleToStartTimeout=str(instance.schedule_to_start),
+            scheduleToCloseTimeout=str(instance.schedule_to_close))))
 
 
 def schedule(
@@ -299,7 +318,7 @@ def schedule(
     input with the full execution context to send the data to the activity.
 
     Args:
-        decisions (Layer1Decisions): the layer decision for swf.
+        decisions (list): the layer decision for swf.
         schedule_context (dict): information about the schedule.
         history (dict): history of the execution.
         context (dict): context of the execution.
@@ -340,7 +359,7 @@ def schedule(
             if states.get_last_state() != activity.ACTIVITY_FAILED:
                 continue
             elif (not current.retry or
-                    current.retry < activity.count_activity_failures(states)):
+                  current.retry < activity.count_activity_failures(states)):
                 raise Exception(
                     'The activity failures has exceeded its retry limit.')
 

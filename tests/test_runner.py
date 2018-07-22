@@ -23,18 +23,18 @@ def test_execute_default_task_runner():
         current_runner.execute(None, None)
 
 
-def test_synchronous_tasks(monkeypatch):
+def test_synchronous_tasks(monkeypatch, boto_client):
     """Test synchronous tasks.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    monkeypatch.setattr(activity.Activity, 'heartbeat', lambda self: None)
+    monkeypatch.setattr(activity.ActivityExecution, 'heartbeat',
+        lambda self: None)
 
     resp = dict(foo='bar')
     current_runner = runner.Sync(
         MagicMock(), MagicMock(return_value=resp))
-    current_activity = activity.Activity()
-    current_activity.hydrate(dict(runner=current_runner))
+    current_activity = activity.ActivityExecution(
+        boto_client, 'activityId', 'taskToken', '{"context": "value"}')
 
     result = current_runner.execute(current_activity, EMPTY_CONTEXT)
 
@@ -46,12 +46,12 @@ def test_synchronous_tasks(monkeypatch):
     assert resp == result
 
 
-def test_aynchronous_tasks(monkeypatch):
+def test_aynchronous_tasks(monkeypatch, boto_client):
     """Test asynchronous tasks.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    monkeypatch.setattr(activity.Activity, 'heartbeat', lambda self: None)
+    monkeypatch.setattr(activity.ActivityExecution, 'heartbeat',
+        lambda self: None)
 
     tasks = [MagicMock() for i in range(5)]
     tasks[2].return_value = dict(oi='mondo')
@@ -66,11 +66,10 @@ def test_aynchronous_tasks(monkeypatch):
     assert current_runner.max_workers == workers
     assert len(current_runner.tasks) == len(tasks)
 
-    current_activity = activity.Activity()
-    current_activity.hydrate(dict(runner=current_runner))
+    current_activity = activity.ActivityExecution(boto_client,
+         'activityId', 'taskToken', '{"hello": "world"}')
 
-    context = dict(hello='world')
-    resp = current_runner.execute(current_activity, context)
+    resp = current_runner.execute(current_activity, current_activity.context)
 
     for current_task in tasks:
         assert current_task.called
