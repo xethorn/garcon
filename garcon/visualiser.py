@@ -17,6 +17,7 @@ import os
 def print_history(function):
     def wrapper(*args, **kwargs):
         func = function(*args, **kwargs)
+        print(*args)
         print(func)
         return func
     return wrapper
