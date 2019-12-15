@@ -26,7 +26,6 @@ setup(
         'backoff',
         'networkx',
         'flask',
-        'json',
         'matplotlib',
         'numpy'],
     zip_safe=False,
