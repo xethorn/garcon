@@ -43,7 +43,7 @@ import boto.swf.layer2 as swf
 import itertools
 import json
 import threading
-from garcon.visualizer import print_history
+from garcon.visualiser import print_history
 
 from garcon import log
 from garcon import utils
@@ -676,7 +676,7 @@ def find_uncomplete_activities(flow, history, context):
         if not states or ACTIVITY_COMPLETED not in states.states:
             yield instance
 
-
+@print_history
 def find_workflow_activities(flow):
     """Retrieves all the activities from a flow
 
