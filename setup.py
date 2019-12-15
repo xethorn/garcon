@@ -21,7 +21,12 @@ setup(
     license='MIT',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['boto', 'backoff'],
+    install_requires=[
+        'boto',
+        'backoff',
+        'networkx',
+        'matplotlib',
+        'numpy'],
     zip_safe=False,
     classifiers=[
         'Programming Language :: Python :: 2.7',
