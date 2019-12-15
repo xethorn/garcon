@@ -13,12 +13,14 @@ import networkx as nx
 from networkx.readwrite import json_graph
 import os
 
+
 def print_history(function):
-    def wrapper(a1, a2):
-        func = function(a1, a2)
+    def wrapper(*args, **kwargs):
+        func = function(*args, **kwargs)
         print(func)
         return func
     return wrapper
+
 
 def get_path():
     script_dir = os.path.dirname(__file__)
