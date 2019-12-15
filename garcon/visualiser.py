@@ -31,12 +31,12 @@ def get_path():
     return os.path.join(script_dir, rel_path)
 
 
-def get_json_graph():
+def get_json_graph(activities):
     G = nx.DiGraph()
 
-    for x in range(1, 6):
+    for activity in activities:
         G.add_node(
-            x,
+            1,
             name="Activity {}".format(x),
             desc="This is a cool {}".format(x))
 
@@ -53,9 +53,9 @@ def get_json_graph():
     return json_graph.node_link_data(G)  # node-link format to serialize
 
 
-def run_server():
+def run_server(activities):
     # write json
-    json.dump(get_json_graph(), open(get_path(), "w"))
+    json.dump(get_json_graph(activities), open(get_path(), "w"))
     print("Wrote node-link JSON data to graph/graph.json")
 
     # Serve the file over http to allow for cross origin requests
@@ -76,9 +76,26 @@ if __name__ == "__main__":
         'flow_name',
         type=str,
         help='python flow file location')
+    parser.add_argument(
+        'namespace',
+        type=str,
+        help='python flow file location')
+    parser.add_argument(
+        'version',
+        type=str,
+        help='python flow file location')
 
     args = parser.parse_args()
 
     flow = imp.load_source("flow", args.flow_name)
 
-    print(activity.find_workflow_activities(flow.Flow("dev", "1.0")))
+    activities = activity.find_workflow_activities(
+        flow.Flow(
+            args.namespace,
+            args.version)
+    )
+
+    for a in activities:
+        print(a.__dict__)
+
+    # run_server(activities)
