@@ -48,18 +48,19 @@ def get_json_graph():
     return json_graph.node_link_data(G)  # node-link format to serialize
 
 
-# write json
-json.dump(get_json_graph(), open(get_path(), "w"))
-print("Wrote node-link JSON data to graph/graph.json")
+def run_server():
+    # write json
+    json.dump(get_json_graph(), open(get_path(), "w"))
+    print("Wrote node-link JSON data to graph/graph.json")
 
-# Serve the file over http to allow for cross origin requests
-app = flask.Flask(__name__, static_folder="graph")
-
-
-@app.route("/")
-def static_proxy():
-    return app.send_static_file("graph.html")
+    # Serve the file over http to allow for cross origin requests
+    app = flask.Flask(__name__, static_folder="graph")
 
 
-print("\nGo to http://localhost:8000 to see the example\n")
-app.run(port=8000)
+    @app.route("/")
+    def static_proxy():
+        return app.send_static_file("graph.html")
+
+
+    print("\nGo to http://localhost:8000 to see the example\n")
+    app.run(port=8000)
