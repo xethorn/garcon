@@ -14,8 +14,8 @@ from networkx.readwrite import json_graph
 import os
 
 def print_history(function):
-    def wrapper():
-        func = function()
+    def wrapper(a1, a2):
+        func = function(a1, a2)
         print(func)
         return func
     return wrapper
