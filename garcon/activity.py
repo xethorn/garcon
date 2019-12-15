@@ -676,7 +676,8 @@ def find_uncomplete_activities(flow, history, context):
         if not states or ACTIVITY_COMPLETED not in states.states:
             yield instance
 
-@print_history
+
+@staticmethod
 def find_workflow_activities(flow):
     """Retrieves all the activities from a flow
 

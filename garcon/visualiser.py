@@ -7,10 +7,12 @@ Example of writing JSON format graph data and using the D3 Javascript library
 to produce an HTML/Javascript drawing.
 """
 import json
-
+import argparse
+import imp
 import flask
 import networkx as nx
 from networkx.readwrite import json_graph
+from garcon.activity.ActivityState import find_workflow_activities
 import os
 
 
@@ -64,6 +66,20 @@ def run_server():
     def static_proxy():
         return app.send_static_file("graph.html")
 
-
     print("\nGo to http://localhost:8000 to see the example\n")
     app.run(port=8000)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='Visualise some flows')
+    parser.add_argument(
+        'flow_name',
+        type=str,
+        help='python flow file location')
+
+    args = parser.parse_args
+
+    flow = imp.load_source("flow", args.flow_name)
+
+    print(find_workflow_activities(flow.Flow("dev", "1.0")))
