@@ -43,6 +43,7 @@ import boto.swf.layer2 as swf
 import itertools
 import json
 import threading
+from garcon.visualizer import print_history
 
 from garcon import log
 from garcon import utils

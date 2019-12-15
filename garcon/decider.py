@@ -62,7 +62,7 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         # Remove all the events that are related to decisions and only.
         return [e for e in events if not e['eventType'].startswith('Decision')]
 
-    @print_history
+    # @print_history
     def get_activity_states(self, history):
         """Get the activity states from the history.
 
