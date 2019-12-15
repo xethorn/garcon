@@ -677,7 +677,6 @@ def find_uncomplete_activities(flow, history, context):
             yield instance
 
 
-@staticmethod
 def find_workflow_activities(flow):
     """Retrieves all the activities from a flow
 
