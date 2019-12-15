@@ -12,7 +12,7 @@ import imp
 import flask
 import networkx as nx
 from networkx.readwrite import json_graph
-from garcon.activity.ActivityState import find_workflow_activities
+from garcon.activity import ActivityState
 import os
 
 
@@ -78,8 +78,8 @@ if __name__ == "__main__":
         type=str,
         help='python flow file location')
 
-    args = parser.parse_args
+    args = parser.parse_args()
 
     flow = imp.load_source("flow", args.flow_name)
 
-    print(find_workflow_activities(flow.Flow("dev", "1.0")))
+    print(ActivityState.find_workflow_activities(flow.Flow("dev", "1.0")))
