@@ -37,7 +37,7 @@ def get_json_graph(activities, dependencies):
     for a in activities:
         G.add_node(
             a.name,
-            **a)
+            **a.__dict__)
 
     for d in dependencies:
         for req in dependencies[d]:
