@@ -16,7 +16,6 @@ import json
 from garcon import activity
 from garcon import event
 from garcon import log
-from garcon.visualiser import print_history
 
 class DeciderWorker(swf.Decider, log.GarconLogger):
 
@@ -62,7 +61,6 @@ class DeciderWorker(swf.Decider, log.GarconLogger):
         # Remove all the events that are related to decisions and only.
         return [e for e in events if not e['eventType'].startswith('Decision')]
 
-    # @print_history
     def get_activity_states(self, history):
         """Get the activity states from the history.
 

@@ -10,16 +10,15 @@ import json
 import argparse
 import imp
 import flask
+import os
 import networkx as nx
 from networkx.readwrite import json_graph
 from garcon import activity
-import os
 
 
 def print_history(function):
     def wrapper(*args, **kwargs):
         func = function(*args, **kwargs)
-        print(*args)
         print(func)
         return func
     return wrapper
