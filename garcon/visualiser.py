@@ -14,7 +14,7 @@ import os
 from time import time
 import networkx as nx
 from networkx.readwrite import json_graph
-from garcon import activity
+from garcon import activity, event
 import boto.swf.layer1 as swf
 
 
@@ -120,7 +120,7 @@ def get_execution_events(params, domain):
         domain,
         params["runId"],
         params["workflowId"])
-    print(events)
+    print(event.activity_states_from_events(events["events"]))
 
 
 def aggregate_execution_stats(flow, domain):
@@ -131,7 +131,6 @@ def aggregate_execution_stats(flow, domain):
 
     for params in execution_params:
         get_execution_events(params, domain)
-
 
 
 if __name__ == "__main__":
