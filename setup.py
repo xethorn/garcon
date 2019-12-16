@@ -25,9 +25,7 @@ setup(
         'boto',
         'backoff',
         'networkx',
-        'flask',
-        'matplotlib',
-        'numpy'],
+        'flask'],
     zip_safe=False,
     classifiers=[
         'Programming Language :: Python :: 2.7',
