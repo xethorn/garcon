@@ -36,8 +36,8 @@ def get_json_graph(activities, dependencies):
 
     for a in activities:
         G.add_node(
-            a.name,
-            **a.__dict__)
+            a["name"],
+            **a)
 
     for d in dependencies:
         for req in dependencies[d]:
@@ -67,7 +67,7 @@ def get_dependencies(source_flow):
 
 
 def sanitize_activity(raw_activity):
-    return dict((k, raw_activity[k]) for k in (
+    return dict((k, raw_activity[k.__dict__]) for k in (
         "name",
         "version",
         "domain",
