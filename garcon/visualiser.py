@@ -102,9 +102,8 @@ def run_server(activities, dependencies):
 def get_closed_executions(flow, domain):
 
     print(domain)
-    executions = swf.Layer1.list_closed_workflow_executions(
-        domain,
-        workflow_name=flow.name)
+    layer = swf.Layer1()
+    executions = layer.list_closed_workflow_executions(domain, workflow_name=flow.name)
     print(executions)
 
 
