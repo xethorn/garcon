@@ -116,8 +116,8 @@ d3.json("graph/graph.json", function (error, graph) {
                 return d.y;
             });
         labelDiv
-            .style("left", function(d){return d.x + 20; })
-            .style("top", function(d){return d.y + 10; });
+            .style("left", function(d){return (d.x + 20) + "px"; })
+            .style("top", function(d){return (d.y + 10) + "px"; });
     }
 });
 
