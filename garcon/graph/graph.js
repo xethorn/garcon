@@ -30,7 +30,9 @@ d3.json("graph/graph.json", function (error, graph) {
     .attr("d", "M 0 0 10 5 0 10")
     .style("fill", "black");
 
-    var label = svg.selectAll(null)
+    var label = svg.append("g")
+    .attr("class", "labels")
+    .selectAll(null)
     .append("foreignObject")
     .attr("width", "100%")
     .attr("height", "100%");
