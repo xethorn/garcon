@@ -101,6 +101,7 @@ def run_server(activities, dependencies):
 
 def get_closed_executions(flow, domain):
 
+    print(domain)
     executions = swf.Layer1.list_closed_workflow_executions(
         domain,
         workflow_name=flow.name)
@@ -121,11 +122,11 @@ if __name__ == "__main__":
     parser.add_argument(
         'namespace',
         type=str,
-        help='python flow file location')
+        help='python flow namespace')
     parser.add_argument(
         'version',
         type=str,
-        help='python flow file location')
+        help='python flow version')
 
     args = parser.parse_args()
 
