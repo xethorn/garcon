@@ -120,7 +120,7 @@ def get_execution_events(params, domain):
         domain,
         params["runId"],
         params["workflowId"])
-    print(events["events"])
+    print(event.make_activity_summary(events["events"]))
 
 
 def aggregate_execution_stats(flow, domain):
