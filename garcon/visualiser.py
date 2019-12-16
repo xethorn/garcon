@@ -106,7 +106,8 @@ def get_closed_executions(flow, domain):
     layer = swf.Layer1()
     executions = layer.list_closed_workflow_executions(domain,
         workflow_name=flow.name,
-        close_latest_date=time()
+        close_latest_date=time(),
+        close_earliest_date=0
         )
     print(executions)
 
