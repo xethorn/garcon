@@ -2,7 +2,7 @@
 
 const getDescription = (d) => Object.keys(d)
     .map((k)=>k+": "+d[k]+"<br>")
-    .join();
+    .join("");
 
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
