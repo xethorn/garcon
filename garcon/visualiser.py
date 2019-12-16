@@ -59,6 +59,7 @@ def get_dependencies(source_flow):
 
     def get_dependency(name, activity, requires=[]):
         dependencies[activity.name] = [a.name for a in requires if a]
+        return activity
 
     source_flow.decider(get_dependency, "context")
 
