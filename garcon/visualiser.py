@@ -109,12 +109,12 @@ def get_closed_executions(flow, domain):
         close_oldest_date=0
         )
 
-    return [closed["execution"] for closed in executions]
+    return [closed["execution"] for closed in executions["executionInfos"]]
 
 def get_execution_activities(params, domain):
 
     layer = swf.Layer1()
-    execution = layer.describe_workflow_execution(domain, param["runId"], param["workflowId"])
+    execution = layer.describe_workflow_execution(domain, params["runId"], params["workflowId"])
     print(execution)
 
 
