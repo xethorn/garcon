@@ -11,6 +11,7 @@ import argparse
 import imp
 import flask
 import os
+from time import time
 import networkx as nx
 from networkx.readwrite import json_graph
 from garcon import activity
@@ -103,7 +104,10 @@ def get_closed_executions(flow, domain):
 
     print(domain)
     layer = swf.Layer1()
-    executions = layer.list_closed_workflow_executions(domain, workflow_name=flow.name)
+    executions = layer.list_closed_workflow_executions(domain,
+        workflow_name=flow.name,
+        close_latest_date=time()
+        )
     print(executions)
 
 
