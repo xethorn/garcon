@@ -1,7 +1,7 @@
 // This is adapted from https://bl.ocks.org/mbostock/2675ff61ea5e063ede2b5d63c08020c7
 
 const getDescription = (d) => {
-    d.keys
+    d.keys()
     .map((k)=>k+": "+d[k]+"<br>")
     .join()
 }
