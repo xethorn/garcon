@@ -177,7 +177,7 @@ def make_activity_summary(events):
                 'eventTimestamp'
                 ) - activity_event['start_timestamp']
 
-            if "total_time_success" not in activity_summary["activity_name"]:
+            if "total_time_success" not in activity_summary[activity_name]:
                 activity_summary[
                     activity_name
                     ][
