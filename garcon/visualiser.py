@@ -53,6 +53,18 @@ def get_json_graph(activities):
     return json_graph.node_link_data(G)  # node-link format to serialize
 
 
+def get_dependencies(source_flow):
+
+    dependencies = {}
+
+    def get_dependency(name, activity, requires=[]):
+        dependencies[activity.name] = [a.name for a in requires]
+
+    source_flow.decider(get_dependency)
+
+    return dependencies
+
+
 def run_server(activities):
     # write json
     json.dump(get_json_graph(activities), open(get_path(), "w"))
@@ -89,11 +101,17 @@ if __name__ == "__main__":
 
     flow = imp.load_source("flow", args.flow_name)
 
+    source_flow = flow.Flow(
+        args.namespace,
+        args.version)
+
     activities = activity.find_workflow_activities(
-        flow.Flow(
-            args.namespace,
-            args.version)
+        source_flow
     )
+
+    dependencies = get_dependencies(source_flow)
+
+    print(dependencies)
 
     for a in activities:
         print(a.__dict__)
