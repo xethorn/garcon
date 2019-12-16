@@ -55,7 +55,7 @@ d3.json("graph/graph.json", function (error, graph) {
     
 
 
-    label
+    var labelDiv = label
     .data(graph.nodes)
     .enter()
     .append("xhtml:div")
@@ -112,7 +112,7 @@ d3.json("graph/graph.json", function (error, graph) {
             .attr("cy", function (d) {
                 return d.y;
             });
-        label
+        labelDiv
             .attr("x", function(d){return d.x + 20; })
             .attr("y", function(d){return d.y + 10; });
     }
