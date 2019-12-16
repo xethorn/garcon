@@ -1,12 +1,8 @@
 // This is adapted from https://bl.ocks.org/mbostock/2675ff61ea5e063ede2b5d63c08020c7
 
-const getDescription = (d) => {
-    console.log(d);
-    console.log(JSON.stringify(d));
-    return d.toObject().keys()
+const getDescription = (d) => Object.keys(d)
     .map((k)=>k+": "+d[k]+"<br>")
-    .join()
-}
+    .join();
 
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
