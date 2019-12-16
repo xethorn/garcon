@@ -106,6 +106,10 @@ if __name__ == "__main__":
         type=str,
         help='python flow file location')
     parser.add_argument(
+        'gtype',
+        type=str,
+        help='pick from overview, latest, summary')
+    parser.add_argument(
         'namespace',
         type=str,
         help='python flow file location')

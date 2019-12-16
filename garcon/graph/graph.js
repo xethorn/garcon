@@ -31,11 +31,9 @@ d3.json("graph/graph.json", function (error, graph) {
     .style("fill", "black");
 
     var label = svg.selectAll(null)
-    .data(graph.nodes)
-    .enter()
     .append("foreignObject")
-    .attr("width", 400)
-    .attr("height", 400);
+    .attr("width", "100%")
+    .attr("height", "100%");
 
     var link = svg.append("g")
         .attr("class", "links")
@@ -57,7 +55,10 @@ d3.json("graph/graph.json", function (error, graph) {
     
 
 
-    label.append("xhtml:div")
+    label
+    .data(graph.nodes)
+    .enter()
+    .append("xhtml:div")
     .html(function (d) { return d.name; })
     .style("text-anchor", "middle")
     .style("fill", "#555")
