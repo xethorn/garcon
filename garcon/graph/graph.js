@@ -57,7 +57,7 @@ d3.json("graph/graph.json", function (error, graph) {
 
 
     var labelDiv = label
-    .selectAll("xhtml:div")
+    .selectAll("div")
     .data(graph.nodes)
     .enter()
     .append("xhtml:div")
