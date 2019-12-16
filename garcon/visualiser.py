@@ -113,14 +113,15 @@ def get_closed_executions(flow, domain):
     return [closed["execution"] for closed in executions["executionInfos"]]
 
 
-def get_execution_events(params, domain):
+def get_execution_summary(params, domain):
 
     layer = swf.Layer1()
     events = layer.get_workflow_execution_history(
         domain,
         params["runId"],
         params["workflowId"])
-    print(event.make_activity_summary(events["events"]))
+    
+    return event.make_activity_summary(events["events"])
 
 
 def aggregate_execution_stats(flow, domain):
@@ -130,7 +131,17 @@ def aggregate_execution_stats(flow, domain):
     summary_stats = {}
 
     for params in execution_params:
-        get_execution_events(params, domain)
+        summary = get_execution_summary(params, domain)
+        for key in summary:
+            if key not in summary_stats:
+                summary_stats[key] = summary[key]
+            else:
+                for var in summary[key]:
+                    summary_stats[key][var] += summary[key][var]
+
+    print(summary_stats)
+
+    return summary_stats
 
 
 if __name__ == "__main__":
