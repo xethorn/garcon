@@ -102,14 +102,33 @@ def run_server(activities, dependencies):
 
 def get_closed_executions(flow, domain):
 
-    print(domain)
     layer = swf.Layer1()
     executions = layer.list_closed_workflow_executions(domain,
         workflow_name=flow.name,
         close_latest_date=time(),
         close_oldest_date=0
         )
-    print(executions)
+
+    return [closed["execution"] for closed in executions]
+
+def get_execution_activities(params, domain):
+
+    layer = swf.Layer1()
+    execution = layer.describe_workflow_execution(domain, param["runId"], param["workflowId"])
+    print(execution)
+
+
+
+
+def aggregate_execution_stats(flow, domain):
+
+    execution_params = get_closed_executions(flow, domain)
+
+    summary_stats = {}
+
+    for params in execution_params:
+        get_execution_activities(params, domain)
+
 
 
 if __name__ == "__main__":
@@ -148,7 +167,7 @@ if __name__ == "__main__":
 
     dependencies = get_dependencies(source_flow)
 
-    get_closed_executions(source_flow, args.namespace)
+    aggregate_execution_stats(source_flow, args.namespace)
 
     for a in activities:
         print(a.__dict__)
