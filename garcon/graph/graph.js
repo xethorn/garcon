@@ -13,7 +13,7 @@ var simulation = d3.forceSimulation()
         return d.id;
     }).distance(350))
     .force("charge", d3.forceManyBody().strength(-300))
-    .force("center", d3.forceCenter("50%", "50%"));
+    .force("center", d3.forceCenter(500, 500));
 
 d3.json("graph/graph.json", function (error, graph) {
     if (error) throw error;
