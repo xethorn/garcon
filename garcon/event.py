@@ -118,7 +118,7 @@ def make_activity_summary(events):
             })
 
             if activity_name not in activity_summary:
-                activity_summary["activity_name"] = {}
+                activity_summary[activity_name] = {}
 
             activity_events.setdefault(
                 activity_name, {}).setdefault(
@@ -130,26 +130,27 @@ def make_activity_summary(events):
             activity_info = event.get('activityTaskFailedEventAttributes')
             activity_event = event_id_info.get(
                 activity_info.get('scheduledEventId'))
+            activity_name = activity_event["activity_name"]
             activity_id = activity_event.get('activity_id')
 
-            if "failed_count" not in activity_summary["activity_name"]:
-                activity_summary["activity_name"]["failed_count"] = 1
+            if "failed_count" not in activity_summary[activity_name]:
+                activity_summary[activity_name]["failed_count"] = 1
             else:
-                activity_summary["activity_name"]["failed_count"] += 1
+                activity_summary[activity_name]["failed_count"] += 1
 
             time_diff = event.get(
                 'eventTimestamp'
                 ) - activity_event['start_timestamp']
 
-            if "total_time_fail" not in activity_summary["activity_name"]:
+            if "total_time_fail" not in activity_summary[activity_name]:
                 activity_summary[
-                    "activity_name"
+                    activity_name
                     ][
                         "total_time_fail"
                         ] = time_diff
             else:
                 activity_summary[
-                    "activity_name"
+                    activity_name
                     ][
                         "total_time_fail"
                         ] += time_diff
@@ -164,12 +165,13 @@ def make_activity_summary(events):
             activity_info = event.get('activityTaskCompletedEventAttributes')
             activity_event = event_id_info.get(
                 activity_info.get('scheduledEventId'))
+            activity_name = activity_event["activity_name"]
             activity_id = activity_event.get('activity_id')
 
-            if "success_count" not in activity_summary["activity_name"]:
-                activity_summary["activity_name"]["success_count"] = 1
+            if "success_count" not in activity_summary[activity_name]:
+                activity_summary[activity_name]["success_count"] = 1
             else:
-                activity_summary["activity_name"]["success_count"] += 1
+                activity_summary[activity_name]["success_count"] += 1
 
             time_diff = event.get(
                 'eventTimestamp'
@@ -177,13 +179,13 @@ def make_activity_summary(events):
 
             if "total_time_success" not in activity_summary["activity_name"]:
                 activity_summary[
-                    "activity_name"
+                    activity_name
                     ][
                         "total_time_success"
                         ] = time_diff
             else:
                 activity_summary[
-                    "activity_name"
+                    activity_name
                     ][
                         "total_time_success"
                         ] += time_diff
