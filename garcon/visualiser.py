@@ -66,6 +66,23 @@ def get_dependencies(source_flow):
     return dependencies
 
 
+def sanitize_activity(raw_activity):
+    return dict((k, raw_activity[k]) for k in (
+        "name",
+        "version",
+        "domain",
+        "retry",
+        "task_list",
+        "pool_size",
+        "schedule_to_start_timeout"
+    ))
+
+
+def sanitize_activities(activities):
+
+    return [sanitize_activity(a) for a in activities]
+
+
 def run_server(activities, dependencies):
     # write json
     json.dump(get_json_graph(activities, dependencies), open(get_path(), "w"))
@@ -110,6 +127,8 @@ if __name__ == "__main__":
         source_flow
     )
 
+    cleaned = sanitize_activities(activities)
+
     dependencies = get_dependencies(source_flow)
 
     print(dependencies)
@@ -117,4 +136,4 @@ if __name__ == "__main__":
     for a in activities:
         print(a.__dict__)
 
-    run_server(activities, dependencies)
+    run_server(cleaned, dependencies)
