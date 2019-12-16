@@ -1,5 +1,11 @@
 // This is adapted from https://bl.ocks.org/mbostock/2675ff61ea5e063ede2b5d63c08020c7
 
+const getDescription = (d) => {
+    d.keys
+    .map((k)=>k+": "+d[k]+"<br>")
+    .join()
+}
+
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
@@ -30,8 +36,8 @@ d3.json("graph/graph.json", function (error, graph) {
     .data(graph.nodes)
     .enter()
     .append("foreignObject")
-    .attr("width", 200)
-    .attr("height", 100);
+    .attr("width", 400)
+    .attr("height", 400);
 
     var link = svg.append("g")
         .attr("class", "links")
@@ -66,7 +72,7 @@ d3.json("graph/graph.json", function (error, graph) {
         .select(this);
         if(element.html()===d.name) {
             element
-            .html(function (d) { return d.name + "<br>" + d.desc; });
+            .html(function (d) { return getDescription(d) });
         } else {
             element
             .html(function (d) { return d.name; });
