@@ -62,6 +62,7 @@ d3.json("graph/graph.json", function (error, graph) {
     .enter()
     .append("xhtml:div")
     .html(function (d) { return d.name; })
+    .style("position", "absolute")
     .style("text-anchor", "middle")
     .style("fill", "#555")
     .style("font-family", "Arial")
@@ -115,8 +116,8 @@ d3.json("graph/graph.json", function (error, graph) {
                 return d.y;
             });
         labelDiv
-            .attr("x", function(d){return d.x + 20; })
-            .attr("y", function(d){return d.y + 10; });
+            .style("left", function(d){return d.x + 20; })
+            .style("top", function(d){return d.y + 10; });
     }
 });
 
