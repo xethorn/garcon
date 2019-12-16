@@ -14,7 +14,7 @@ import os
 import networkx as nx
 from networkx.readwrite import json_graph
 from garcon import activity
-import boto.swf.layer1.Layer1 as swf
+import boto.swf.layer1 as swf
 
 
 def print_history(function):
@@ -101,7 +101,7 @@ def run_server(activities, dependencies):
 
 def get_closed_executions(flow, domain):
 
-    executions = swf.list_closed_workflow_executions(
+    executions = swf.Layer1.list_closed_workflow_executions(
         domain,
         workflow_name=flow.name)
     print(executions)
