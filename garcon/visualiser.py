@@ -107,7 +107,7 @@ def get_closed_executions(flow, domain):
     executions = layer.list_closed_workflow_executions(domain,
         workflow_name=flow.name,
         close_latest_date=time(),
-        close_earliest_date=0
+        close_oldest_date=0
         )
     print(executions)
 
