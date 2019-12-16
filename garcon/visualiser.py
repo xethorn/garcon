@@ -31,21 +31,21 @@ def get_path():
     return os.path.join(script_dir, rel_path)
 
 
-def get_json_graph(activities):
+def get_json_graph(activities, dependencies):
     G = nx.DiGraph()
 
-    for activity in activities:
+    for a in activities:
         G.add_node(
-            1,
-            name="Activity {}".format(x),
-            desc="This is a cool {}".format(x))
+            a.name,
+            **a)
 
-    G.add_edges_from([
-        (1, 2),
-        (2, 3),
-        (2, 4),
-        (3, 5),
-        (4, 5)])
+    for d in dependencies:
+        for req in dependencies[d]:
+            G.add_edge(
+                req,
+                d
+            )
+
     # this d3 example uses the name attribute for the mouse-hover value,
     # so add a name to each node
 
@@ -66,9 +66,9 @@ def get_dependencies(source_flow):
     return dependencies
 
 
-def run_server(activities):
+def run_server(activities, dependencies):
     # write json
-    json.dump(get_json_graph(activities), open(get_path(), "w"))
+    json.dump(get_json_graph(activities, dependencies), open(get_path(), "w"))
     print("Wrote node-link JSON data to graph/graph.json")
 
     # Serve the file over http to allow for cross origin requests
@@ -117,4 +117,4 @@ if __name__ == "__main__":
     for a in activities:
         print(a.__dict__)
 
-    # run_server(activities)
+    run_server(activities, dependencies)
