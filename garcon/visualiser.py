@@ -137,6 +137,8 @@ def aggregate_execution_stats(flow, domain):
                 summary_stats[key] = summary[key]
             else:
                 for var in summary[key]:
+                    if var not in summary_stats[key]:
+                        summary_stats[key][var] = summary[key][var]
                     summary_stats[key][var] += summary[key][var]
 
     print(summary_stats)
