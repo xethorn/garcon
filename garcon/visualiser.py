@@ -67,7 +67,7 @@ def get_dependencies(source_flow):
 
 
 def sanitize_activity(raw_activity):
-    return dict((k, raw_activity[k.__dict__]) for k in (
+    return dict((k, raw_activity.__dict__[k]) for k in (
         "name",
         "version",
         "domain",
