@@ -5,12 +5,12 @@ const getDescription = (d) => Object.keys(d)
     .join("");
 
 const getColorFromFailure = (ratio) => {
-    const red = ratio > 0.1 ? 255 : Math.floor((255/0.1)*ratio);
+    const red = ratio > 0.2 ? 255 : Math.floor((255/0.2)*ratio);
     let green = 0;
-    if(ratio<0.1) {
+    if(ratio<0.2) {
         green = 255
-    } else if (ratio <0.2) {
-        green = Math.floor((255/0.1)*(0.2-ratio))
+    } else if (ratio <0.4) {
+        green = Math.floor((255/0.2)*(0.4-ratio))
     } else {
         green = 0;
     }

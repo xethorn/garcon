@@ -136,6 +136,8 @@ def aggregate_execution_stats(flow, domain):
 
     summary_stats = {}
 
+    execution_count = 0
+
     for params in execution_params:
         summary = get_execution_summary(params, domain)
         for key in summary:
@@ -146,6 +148,8 @@ def aggregate_execution_stats(flow, domain):
                     if var not in summary_stats[key]:
                         summary_stats[key][var] = summary[key][var]
                     summary_stats[key][var] += summary[key][var]
+        execution_count += 1
+        print("processed {} executions".format(execution_count))
 
     for activity_name in summary_stats:
 
@@ -174,8 +178,6 @@ def aggregate_execution_stats(flow, domain):
             "success_n": success_n,
             "failure_n": failure_n
         }
-
-    print(summary_stats)
 
     return summary_stats
 
