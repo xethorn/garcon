@@ -4,6 +4,20 @@ const getDescription = (d) => Object.keys(d)
     .map((k)=>k+": "+d[k]+"<br>")
     .join("");
 
+const getColorFromFailure = (ratio) => {
+    const red = ratio > 0.1 ? 255 : Math.floor((255/0.1)*ratio);
+    
+    if(ratio<0.1) {
+        const green = 255
+    } else if (ratio <0.2) {
+        const green = Math.floor((255/0.1)*(0.2-ratio))
+    } else {
+        const green = 0;
+    }
+    return `rgb(${red},${green},0)`;
+}
+
+
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
@@ -48,7 +62,10 @@ d3.json("graph/graph.json", function (error, graph) {
         .selectAll("circle")
         .data(graph.nodes)
         .enter().append("circle")
-        .attr("r", (d)=>{return d.avg_duration})
+        .attr("r", (d)=>{return 3*d.avg_duration})
+        .attr("fill", (d)=>{
+            return getColorFromFailure(d.failure_n/d.success_n)
+        })
         .call(d3.drag()
             .on("start", dragstarted)
             .on("drag", dragged)
