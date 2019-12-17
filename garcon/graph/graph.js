@@ -64,7 +64,7 @@ d3.json("graph/graph.json", function (error, graph) {
         .enter().append("circle")
         .attr("r", (d)=>{return 3*d.avg_duration})
         .attr("fill", (d)=>{
-            return getColorFromFailure(d.failure_n/d.success_n)
+            return getColorFromFailure(d.failure_n/(d.success_n+1))
         })
         .call(d3.drag()
             .on("start", dragstarted)
