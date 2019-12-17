@@ -120,7 +120,7 @@ def get_execution_summary(params, domain):
         domain,
         params["runId"],
         params["workflowId"])
-    
+
     return event.make_activity_summary(events["events"])
 
 
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument(
         'gtype',
         type=str,
-        help='pick from overview, latest, summary')
+        help='pick from overview(default) or summary')
     parser.add_argument(
         'namespace',
         type=str,
@@ -182,9 +182,8 @@ if __name__ == "__main__":
 
     dependencies = get_dependencies(source_flow)
 
-    aggregate_execution_stats(source_flow, args.namespace)
-
-    for a in activities:
-        print(a.__dict__)
-
-    run_server(cleaned, dependencies)
+    if(args.gtype == "summary"):
+        aggregate = aggregate_execution_stats(source_flow, args.namespace)
+        run_server(aggregate, dependencies)
+    else:
+        run_server(cleaned, dependencies)
