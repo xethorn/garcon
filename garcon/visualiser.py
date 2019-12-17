@@ -35,10 +35,16 @@ def get_path():
 def get_json_graph(activities, dependencies):
     G = nx.DiGraph()
 
-    for a in activities:
-        G.add_node(
-            a["name"],
-            **a)
+    if(isinstance(activities, dict)):
+        for a in activities:
+            G.add_node(
+                a,
+                **activities[a])
+    else:
+        for a in activities:
+            G.add_node(
+                a["name"],
+                **a)
 
     for d in dependencies:
         for req in dependencies[d]:
