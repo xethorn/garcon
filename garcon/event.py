@@ -118,7 +118,9 @@ def make_activity_summary(events):
             })
 
             if activity_name not in activity_summary:
-                activity_summary[activity_name] = {}
+                activity_summary[activity_name] = {
+                    "name": activity_name
+                }
 
             activity_events.setdefault(
                 activity_name, {}).setdefault(
