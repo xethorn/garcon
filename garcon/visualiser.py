@@ -148,6 +148,24 @@ def aggregate_execution_stats(flow, domain):
                         summary_stats[key][var] = summary[key][var]
                     summary_stats[key][var] += summary[key][var]
 
+    for activity_name in summary_stats:
+
+        oldstats = summary_stats[activity_name]
+        total_duration = oldstats['total_time_success']
+        total_duration += oldstats['total_time_fail']
+
+        total_runs = oldstats['success_count']
+        total_runs += oldstats['failed_count']
+
+        avg_duration = round(total_duration/total_runs)
+
+        summary_stats[activity_name] = {
+            "name": activity_name,
+            "avg_duration": avg_duration,
+            "success_n": oldstats['success_count'],
+            "failure_n": oldstats['failed_count']
+        }
+
     print(summary_stats)
 
     return summary_stats

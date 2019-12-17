@@ -48,7 +48,7 @@ d3.json("graph/graph.json", function (error, graph) {
         .selectAll("circle")
         .data(graph.nodes)
         .enter().append("circle")
-        .attr("r", 10)
+        .attr("r", (d)=>{return d.avg_duration})
         .call(d3.drag()
             .on("start", dragstarted)
             .on("drag", dragged)
