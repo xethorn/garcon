@@ -21,7 +21,7 @@ setup(
     license='MIT',
     packages=find_packages(),
     include_package_data=True,
-    data_files=[('graph', ['graph/graph.js', 'graph/graph.json'])],
+    data_files=[('graph', ['garcon/graph/graph.js', 'garcon/graph/graph.json'])],
     install_requires=[
         'boto',
         'backoff',
