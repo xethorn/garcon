@@ -79,11 +79,11 @@ def activity_states_from_events(events):
 
 
 def make_activity_summary(events):
-    """Get activity states from a list of events.
+    """Get activity summaries from a list of events.
 
     The workflow events contains the different states of our activities. This
-    method consumes the logs, and regenerates a dictionnary with the list of
-    all the activities and their states.
+    method consumes the logs, and regenerates a dictionary with the list of
+    all the activities and their summaries.
 
     Note:
         Please note: from the list of events, only activities that have been
