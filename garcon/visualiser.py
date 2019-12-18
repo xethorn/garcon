@@ -140,7 +140,7 @@ def get_closed_executions(flow, domain):
             "closeTimestamp"
             ]-closed[
                 "startTimestamp"
-                ]) > 300]
+                ]) > 600]
 
 
 def get_execution_summary(params, domain):
