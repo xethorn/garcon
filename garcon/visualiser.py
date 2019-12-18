@@ -93,9 +93,10 @@ def sanitize_activities(activities):
 
 def run_server(activities, dependencies):
     # write json
-    path = getPath()
+    path = get_path()
     if not os.path.exists(path):
-    with open(path, 'w'): pass
+        with open(path, 'w'):
+            pass
     json.dump(get_json_graph(activities, dependencies), open(path, "w"))
     print("Wrote node-link JSON data to graph/graph.json")
 
