@@ -140,7 +140,7 @@ def get_closed_executions(flow, domain):
             "closeTimestamp"
             ]-closed[
                 "startTimestamp"
-                ]).total_seconds() > 300]
+                ]) > 300]
 
 
 def get_execution_summary(params, domain):
