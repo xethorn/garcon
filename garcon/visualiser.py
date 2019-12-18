@@ -26,6 +26,19 @@ def print_history(function):
     return wrapper
 
 
+def aggregate_paginated(func, key, *args, **kwargs):
+    new_result = func(*args, **kwargs)
+    aggregate = new_result[key]
+    while("nextPageToken" in new_result):
+        new_result = func(
+            *args,
+            nextPageToken=new_result["nextPageToken"],
+            **kwargs)
+        aggregate += new_result[key]
+
+    return aggregate
+
+
 def get_path():
     script_dir = os.path.dirname(__file__)
     rel_path = "graph/graph.json"
@@ -111,25 +124,36 @@ def run_server(activities, dependencies):
 def get_closed_executions(flow, domain):
 
     layer = swf.Layer1()
-    executions = layer.list_closed_workflow_executions(
+    executions = aggregate_paginated(
+        layer.list_closed_workflow_executions,
+        "executionInfos",
         domain,
         workflow_name=flow.name,
         close_latest_date=time(),
         close_oldest_date=0
         )
 
-    return [closed["execution"] for closed in executions["executionInfos"]]
+    return [
+        closed["execution"]
+        for closed in executions
+        if (closed[
+            "closeTimestamp"
+            ]-closed[
+                "startTimestamp"
+                ]).total_seconds() > 300]
 
 
 def get_execution_summary(params, domain):
 
     layer = swf.Layer1()
-    events = layer.get_workflow_execution_history(
+    events = aggregate_paginated(
+        layer.get_workflow_execution_history,
+        "events",
         domain,
         params["runId"],
         params["workflowId"])
 
-    return event.make_activity_summary(events["events"])
+    return event.make_activity_summary(events)
 
 
 def aggregate_execution_stats(flow, domain, ref_activities):
@@ -225,7 +249,10 @@ if __name__ == "__main__":
     dependencies = get_dependencies(source_flow)
 
     if(args.gtype == "summary"):
-        aggregate = aggregate_execution_stats(source_flow, args.namespace, cleaned)
+        aggregate = aggregate_execution_stats(
+            source_flow,
+            args.namespace,
+            cleaned)
         run_server(aggregate, dependencies)
     else:
         run_server(cleaned, dependencies)
