@@ -25,7 +25,7 @@ var svg = d3.select("svg"),
 var simulation = d3.forceSimulation()
     .force("link", d3.forceLink().id(function (d) {
         return d.id;
-    }).distance(350))
+    }).distance(150))
     .force("charge", d3.forceManyBody().strength(-300))
     .force("center", d3.forceCenter(500, 500));
 
@@ -62,7 +62,7 @@ d3.json("graph/graph.json", function (error, graph) {
         .selectAll("circle")
         .data(graph.nodes)
         .enter().append("circle")
-        .attr("r", (d)=>{return Math.ceil(Math.sqrt(d.avg_duration+1))})
+        .attr("r", (d)=>{return Math.ceil(Math.sqrt(d.avg_duration+10 || 10))})
         .attr("fill", (d)=>{
             return getColorFromFailure(d.failure_n/(d.failure_n+d.success_n+1))
         })
@@ -124,7 +124,6 @@ d3.json("graph/graph.json", function (error, graph) {
             .attr("y2", function (d) {
                 return d.target.y;
             });
-
         node
             .attr("cx", function (d) {
                 return d.x;
