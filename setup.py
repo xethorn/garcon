@@ -25,6 +25,8 @@ setup(
         'garcon/graph/graph.js',
         'garcon/graph/graph.json',
         'garcon/graph/graph.html',
+        'garcon/graph/graph.css',
+
         ])],
     install_requires=[
         'boto',
