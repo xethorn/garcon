@@ -206,9 +206,7 @@ if __name__ == "__main__":
 
     flow = imp.load_source("flow", args.flow_name)
 
-    source_flow = flow.Flow(
-        args.namespace,
-        args.version)
+    source_flow = flow.Flow()
 
     activities = activity.find_workflow_activities(
         source_flow
