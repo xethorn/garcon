@@ -132,7 +132,7 @@ def get_execution_summary(params, domain):
     return event.make_activity_summary(events["events"])
 
 
-def aggregate_execution_stats(flow, domain):
+def aggregate_execution_stats(flow, domain, ref_activities):
 
     execution_params = get_closed_executions(flow, domain)
 
@@ -153,33 +153,39 @@ def aggregate_execution_stats(flow, domain):
         execution_count += 1
         print("processed {} executions".format(execution_count))
 
-    for activity_name in summary_stats:
+    for ref_activity in ref_activities:
 
-        oldstats = summary_stats[activity_name]
+        activity_name = ref_activity["name"]
 
-        total_duration = 0
-        total_runs = 0
-        success_n = 0
-        failure_n = 0
+        if activity_name in summary_stats:
 
-        if 'success_count' in oldstats:
-            total_duration += oldstats['total_time_success']
-            total_runs += oldstats['success_count']
-            success_n += oldstats['success_count']
+            oldstats = summary_stats[activity_name]
 
-        if 'failed_count' in oldstats:
-            total_duration += oldstats['total_time_fail']
-            total_runs += oldstats['failed_count']
-            failure_n += oldstats['failed_count']
+            total_duration = 0
+            total_runs = 0
+            success_n = 0
+            failure_n = 0
 
-        avg_duration = round(total_duration/total_runs)
+            if 'success_count' in oldstats:
+                total_duration += oldstats['total_time_success']
+                total_runs += oldstats['success_count']
+                success_n += oldstats['success_count']
 
-        summary_stats[activity_name] = {
-            "name": activity_name,
-            "avg_duration": avg_duration,
-            "success_n": success_n,
-            "failure_n": failure_n
-        }
+            if 'failed_count' in oldstats:
+                total_duration += oldstats['total_time_fail']
+                total_runs += oldstats['failed_count']
+                failure_n += oldstats['failed_count']
+
+            avg_duration = round(total_duration/total_runs)
+
+            summary_stats[activity_name] = {
+                "name": activity_name,
+                "avg_duration": avg_duration,
+                "success_n": success_n,
+                "failure_n": failure_n
+            }
+        else:
+            summary_stats[activity_name] = ref_activity
 
     return summary_stats
 
@@ -219,7 +225,7 @@ if __name__ == "__main__":
     dependencies = get_dependencies(source_flow)
 
     if(args.gtype == "summary"):
-        aggregate = aggregate_execution_stats(source_flow, args.namespace)
+        aggregate = aggregate_execution_stats(source_flow, args.namespace, cleaned)
         run_server(aggregate, dependencies)
     else:
         run_server(cleaned, dependencies)
