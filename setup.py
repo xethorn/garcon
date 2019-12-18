@@ -21,6 +21,8 @@ setup(
     license='MIT',
     packages=find_packages(),
     include_package_data=True,
+    package_dir={'garcon': 'garcon'},
+    package_data={'garcon': ['garcon/graph/*']},
     install_requires=[
         'boto',
         'backoff',
