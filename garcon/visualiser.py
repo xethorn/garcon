@@ -32,7 +32,7 @@ def aggregate_paginated(func, key, *args, **kwargs):
     while("nextPageToken" in new_result):
         new_result = func(
             *args,
-            nextPageToken=new_result["nextPageToken"],
+            next_page_token=new_result["nextPageToken"],
             **kwargs)
         aggregate += new_result[key]
 
