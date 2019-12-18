@@ -31,11 +31,6 @@ def get_path():
     rel_path = "graph/graph.json"
     return os.path.join(script_dir, rel_path)
 
-def get_folder_path():
-    script_dir = os.path.dirname(__file__)
-    rel_path = "graph"
-    return os.path.join(script_dir, rel_path)
-
 
 def get_json_graph(activities, dependencies):
     G = nx.DiGraph()
@@ -103,7 +98,7 @@ def run_server(activities, dependencies):
     print("Wrote node-link JSON data to graph/graph.json")
 
     # Serve the file over http to allow for cross origin requests
-    app = flask.Flask(__name__, static_folder=get_folder_path())
+    app = flask.Flask(__name__, static_folder="graph")
 
     @app.route("/")
     def static_proxy():
