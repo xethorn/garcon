@@ -62,7 +62,7 @@ d3.json("graph/graph.json", function (error, graph) {
         .selectAll("circle")
         .data(graph.nodes)
         .enter().append("circle")
-        .attr("r", (d)=>{return Math.ceil(Math.sqrt(d.avg_duration))})
+        .attr("r", (d)=>{return Math.ceil(Math.sqrt(d.avg_duration+1))})
         .attr("fill", (d)=>{
             return getColorFromFailure(d.failure_n/(d.failure_n+d.success_n+1))
         })
