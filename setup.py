@@ -21,7 +21,18 @@ setup(
     license='MIT',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['boto', 'backoff'],
+    data_files=[('graph', [
+        'garcon/graph/graph.js',
+        'garcon/graph/graph.json',
+        'garcon/graph/graph.html',
+        'garcon/graph/graph.css',
+
+        ])],
+    install_requires=[
+        'boto',
+        'backoff',
+        'networkx',
+        'flask'],
     zip_safe=False,
     classifiers=[
         'Programming Language :: Python :: 2.7',
