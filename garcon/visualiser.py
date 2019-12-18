@@ -68,7 +68,7 @@ def get_dependencies(source_flow):
         dependencies[activity.name] = [a.name for a in requires if a]
         return activity
 
-    source_flow.decider(get_dependency, "context")
+    source_flow.decider(get_dependency)
 
     return dependencies
 
