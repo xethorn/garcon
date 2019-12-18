@@ -164,6 +164,8 @@ def aggregate_execution_stats(flow, domain, ref_activities):
 
     execution_count = 0
 
+    print("Will process {} executions".format(len(execution_params)))
+
     for params in execution_params:
         summary = get_execution_summary(params, domain)
         for key in summary:
