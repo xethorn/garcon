@@ -5,12 +5,12 @@ const getDescription = (d) => Object.keys(d)
     .join("");
 
 const getColorFromFailure = (ratio) => {
-    const red = ratio > 0.2 ? 255 : Math.floor((255/0.2)*ratio);
+    const red = ratio > 0.1 ? 255 : Math.floor((255/0.1)*ratio);
     let green = 0;
-    if(ratio<0.2) {
+    if(ratio<0.1) {
         green = 255
-    } else if (ratio <0.4) {
-        green = Math.floor((255/0.2)*(0.4-ratio))
+    } else if (ratio <0.2) {
+        green = Math.floor((255/0.2)*(0.2-ratio))
     } else {
         green = 0;
     }
@@ -62,7 +62,7 @@ d3.json("graph/graph.json", function (error, graph) {
         .selectAll("circle")
         .data(graph.nodes)
         .enter().append("circle")
-        .attr("r", (d)=>{return 3*d.avg_duration})
+        .attr("r", (d)=>{return Math.ceil(Math.sqrt(d.avg_duration))})
         .attr("fill", (d)=>{
             return getColorFromFailure(d.failure_n/(d.failure_n+d.success_n+1))
         })

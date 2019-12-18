@@ -93,7 +93,10 @@ def sanitize_activities(activities):
 
 def run_server(activities, dependencies):
     # write json
-    json.dump(get_json_graph(activities, dependencies), open(get_path(), "w"))
+    path = getPath()
+    if not os.path.exists(path):
+    with open(path, 'w'): pass
+    json.dump(get_json_graph(activities, dependencies), open(path, "w"))
     print("Wrote node-link JSON data to graph/graph.json")
 
     # Serve the file over http to allow for cross origin requests
