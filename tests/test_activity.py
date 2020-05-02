@@ -316,8 +316,8 @@ def test_create_activity(monkeypatch, boto_client):
     assert isinstance(current_activity, activity.Activity)
     assert current_activity.name == 'flow_name_activity_name'
     assert current_activity.task_list == 'flow_name_activity_name'
-    assert current_activity.domain is 'domain_name'
-    assert current_activity.client is boto_client
+    assert current_activity.domain == 'domain_name'
+    assert current_activity.client == boto_client
 
 
 def test_create_external_activity(monkeypatch, boto_client):

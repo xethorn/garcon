@@ -15,8 +15,7 @@ setup(
     url='https://github.com/xethorn/garcon/',
     author='Michael Ortali',
     author_email='hello@xethorn.net',
-    description=(
-        'Lightweight library for AWS SWF.'),
+    description=('Lightweight library for AWS SWF.'),
     long_description=long_description,
     license='MIT',
     packages=find_packages(),
@@ -24,9 +23,8 @@ setup(
     install_requires=['boto', 'backoff'],
     zip_safe=False,
     classifiers=[
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],)
