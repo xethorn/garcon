@@ -64,7 +64,7 @@ def test_decorator():
     assert test.__garcon__.get('foo') is None
 
     task._decorate(test, 'foo', 'bar')
-    assert test.__garcon__.get('foo') is 'bar'
+    assert test.__garcon__.get('foo') == 'bar'
 
 
 def test_generator_decorator():
@@ -108,7 +108,7 @@ def test_link_decorator_with_empty_source():
 
     task._link_decorator(testA, testB)
     assert not getattr(testA, '__garcon__', None)
-    assert len(testB.__garcon__) is 0
+    assert len(testB.__garcon__) == 0
 
     task._decorate(testB, 'foo', 'value')
     assert testB.__garcon__.get('foo') == 'value'
@@ -123,7 +123,7 @@ def test_task_decorator():
 
     @task.decorate(timeout=timeout)
     def test(user):
-        assert user is userinfo
+        assert user == userinfo
 
     assert test.__garcon__.get('timeout') == timeout
     assert test.__garcon__.get('heartbeat') == timeout
@@ -153,6 +153,7 @@ def test_task_decorator_with_heartbeat():
     """
 
     heartbeat = 50
+    userinfo = None
 
     @task.decorate(heartbeat=heartbeat)
     def test(user):
