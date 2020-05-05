@@ -1,20 +1,28 @@
 from garcon import activity
 from garcon import decider
 from threading import Thread
-import boto.swf.layer2 as swf
 import time
 
+import boto3
 import workflow
 
 # Initiate the workflow on the dev domain and custom_decider name.
-flow = workflow.Workflow('dev', 'custom_decider')
-deciderworker = decider.DeciderWorker(flow)
+client = boto3.client('swf', region_name='us-east-1')
+workflow = workflow.Workflow(client, 'dev', 'custom_decider')
+deciderworker = decider.DeciderWorker(workflow)
 
-# swf.WorkflowType(
-#     name=flow.name, domain=flow.domain,
-#     version='1.0', task_list=flow.name).start()
+client.start_workflow_execution(
+    domain=workflow.domain,
+    workflowId='unique-workflow-identifier',
+    workflowType=dict(
+        name=workflow.name,
+        version='1.0'),
+    executionStartToCloseTimeout='3600',
+    taskStartToCloseTimeout='3600',
+    childPolicy='TERMINATE',
+    taskList=dict(name=workflow.name))
 
-Thread(target=activity.ActivityWorker(flow).run).start()
+Thread(target=activity.ActivityWorker(workflow).run).start()
 while(True):
     deciderworker.run()
     time.sleep(1)

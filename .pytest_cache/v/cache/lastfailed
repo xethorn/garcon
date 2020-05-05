@@ -1,0 +1,5 @@
+{
+  "tests/test_activity.py::test_run_capture_fail_exception": true,
+  "tests/test_activity.py::test_task_failure": true,
+  "tests/test_activity.py::test_task_failure_on_close_activity": true
+}

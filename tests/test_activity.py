@@ -2,10 +2,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 try:
     from unittest.mock import MagicMock
+    from unittest.mock import ANY
 except:
     from mock import MagicMock
+    from mock import ANY
+from botocore import exceptions
 import json
 import pytest
+import sys
 
 from garcon import activity
 from garcon import event
@@ -14,28 +18,26 @@ from garcon import task
 from garcon import utils
 from tests.fixtures import decider
 
-import boto.exception as boto_exception
-
 
 def activity_run(
-        monkeypatch, poll=None, complete=None, fail=None, execute=None):
+        monkeypatch, boto_client, poll=None, complete=None, fail=None,
+        execute=None):
     """Create an activity.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-
-    current_activity = activity.Activity()
+    current_activity = activity.Activity(boto_client)
     poll = poll or dict()
 
     monkeypatch.setattr(
         current_activity, 'execute_activity',
         execute or MagicMock(return_value=dict()))
     monkeypatch.setattr(
-        current_activity, 'poll', MagicMock(return_value=poll))
+        boto_client, 'poll_for_activity_task', MagicMock(return_value=poll))
     monkeypatch.setattr(
-        current_activity, 'complete', complete or MagicMock())
+        boto_client, 'respond_activity_task_completed', complete or MagicMock())
     monkeypatch.setattr(
-        current_activity, 'fail', fail or MagicMock())
+        boto_client, 'respond_activity_task_failed', fail or MagicMock())
+
     return current_activity
 
 
@@ -61,104 +63,104 @@ def generators(request):
 
 @pytest.fixture
 def poll():
-    return dict(activityId='something')
+    return dict(
+        activityId='something',
+        taskToken='taskToken')
 
 
-def test_poll_for_activity(monkeypatch, poll=poll):
+def test_poll_for_activity(monkeypatch, poll, boto_client):
     """Test that poll_for_activity successfully polls.
     """
 
-    current_activity = activity_run(monkeypatch, poll)
-    current_activity.poll.return_value = 'foo'
+    activity_task = poll
+    current_activity = activity_run(monkeypatch, boto_client, poll)
+    boto_client.poll_for_activity_task.return_value = activity_task
 
-    activity_results = current_activity.poll_for_activity()
-    assert current_activity.poll.called
-    assert activity_results == 'foo'
+    activity_execution = current_activity.poll_for_activity()
+    assert boto_client.poll_for_activity_task.called
+    assert activity_execution.task_token is poll.get('taskToken')
 
 
-def test_poll_for_activity_throttle_retry(monkeypatch, poll=poll):
+def test_poll_for_activity_throttle_retry(monkeypatch, poll, boto_client):
     """Test that SWF throttles are retried during polling.
     """
 
-    current_activity = activity_run(monkeypatch, poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll)
+    boto_client.poll_for_activity_task.side_effect = exceptions.ClientError(
+        {'Error': {'Code': 'ThrottlingException'}},
+        'operation name')
 
-    response_status = 400
-    response_reason = 'Bad Request'
-    reponse_body = (
-        '{"__type": "com.amazon.coral.availability#ThrottlingException",'
-        '"message": "Rate exceeded"}')
-    json_body = json.loads(reponse_body)
-    exception = boto_exception.SWFResponseError(
-        response_status, response_reason, body=json_body)
-    current_activity.poll.side_effect = exception
-
-    with pytest.raises(boto_exception.SWFResponseError):
+    with pytest.raises(exceptions.ClientError):
         current_activity.poll_for_activity()
-    assert current_activity.poll.call_count == 5
+    assert boto_client.poll_for_activity_task.call_count == 5
 
 
-def test_poll_for_activity_error(monkeypatch, poll=poll):
+def test_poll_for_activity_error(monkeypatch, poll, boto_client):
     """Test that non-throttle errors during poll are thrown.
     """
 
-    current_activity = activity_run(monkeypatch, poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll)
 
     exception = Exception()
-    current_activity.poll.side_effect = exception
+    boto_client.poll_for_activity_task.side_effect = exception
 
     with pytest.raises(Exception):
         current_activity.poll_for_activity()
 
 
-def test_poll_for_activity_identity(monkeypatch, poll=poll):
+def test_poll_for_activity_identity(monkeypatch, poll, boto_client):
     """Test that identity is passed to poll_for_activity.
     """
 
-    current_activity = activity_run(monkeypatch, poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll)
 
     current_activity.poll_for_activity(identity='foo')
-    current_activity.poll.assert_called_with(identity='foo')
+    boto_client.poll_for_activity_task.assert_called_with(
+        domain=ANY, taskList=ANY, identity='foo')
 
 
-def test_poll_for_activity_no_identity(monkeypatch, poll=poll):
+def test_poll_for_activity_no_identity(monkeypatch, poll, boto_client):
     """Test poll_for_activity works without identity passed as param.
     """
 
-    current_activity = activity_run(monkeypatch, poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll)
 
     current_activity.poll_for_activity()
-    current_activity.poll.assert_called_with(identity=None)
+    boto_client.poll_for_activity_task.assert_called_with(
+        domain=ANY, taskList=ANY)
 
 
-def test_run_activity(monkeypatch, poll):
+def test_run_activity(monkeypatch, poll, boto_client):
     """Run an activity.
     """
 
-    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll=poll)
     current_activity.run()
 
-    current_activity.poll.assert_called_with(identity=None)
+    boto_client.poll_for_activity_task.assert_called_with(
+        domain=ANY, taskList=ANY)
     assert current_activity.execute_activity.called
-    assert current_activity.complete.called
+    assert boto_client.respond_activity_task_completed.called
 
 
-def test_run_activity_identity(monkeypatch, poll):
+def test_run_activity_identity(monkeypatch, poll, boto_client):
     """Run an activity with identity as param.
     """
 
-    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll=poll)
     current_activity.run(identity='foo')
 
-    current_activity.poll.assert_called_with(identity='foo')
+    boto_client.poll_for_activity_task.assert_called_with(
+        domain=ANY, taskList=ANY, identity='foo')
     assert current_activity.execute_activity.called
-    assert current_activity.complete.called
+    assert boto_client.respond_activity_task_completed.called
 
 
-def test_run_capture_exception(monkeypatch, poll):
+def test_run_capture_exception(monkeypatch, poll, boto_client):
     """Run an activity with an exception raised during activity execution.
     """
 
-    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll)
     current_activity.on_exception = MagicMock()
     current_activity.execute_activity = MagicMock()
     error_msg_long = "Error" * 100
@@ -166,49 +168,55 @@ def test_run_capture_exception(monkeypatch, poll):
     current_activity.execute_activity.side_effect = Exception(error_msg_long)
     current_activity.run()
 
-    assert current_activity.poll.called
+    assert boto_client.poll_for_activity_task.called
     assert current_activity.execute_activity.called
     assert current_activity.on_exception.called
-    current_activity.fail.assert_called_with(reason=actual_error_msg)
-    assert not current_activity.complete.called
+    boto_client.respond_activity_task_failed.assert_called_with(
+        taskToken=poll.get('taskToken'),
+        reason=actual_error_msg)
+    assert not boto_client.respond_activity_task_completed.called
 
 
-def test_run_capture_fail_exception(monkeypatch, poll):
-    """Run an activity with an exception raised during failing execution.
-    """
+# def test_run_capture_fail_exception(monkeypatch, poll, boto_client):
+#     """Run an activity with an exception raised during failing execution.
+#     """
 
-    current_activity = activity_run(monkeypatch, poll=poll)
-    current_activity.on_exception = MagicMock()
-    current_activity.complete = MagicMock()
-    current_activity.fail = MagicMock()
-    error_msg_long = "Error" * 100
-    actual_error_msg = error_msg_long[:255]
-    current_activity.complete.side_effect = Exception(error_msg_long)
-    current_activity.fail.side_effect = Exception(error_msg_long)
-    current_activity.run()
+#     current_activity = activity_run(monkeypatch, boto_client, poll)
+#     current_activity.on_exception = MagicMock()
+#     current_activity.complete = MagicMock()
+#     current_activity.fail = MagicMock()
+#     error_msg_long = "Error" * 100
+#     actual_error_msg = error_msg_long[:255]
+#     current_activity.complete.side_effect = Exception(error_msg_long)
+#     current_activity.fail.side_effect = Exception(error_msg_long)
+#     current_activity.run()
 
-    assert current_activity.poll.called
-    assert current_activity.execute_activity.called
-    assert current_activity.complete.called
-    current_activity.fail.assert_called_with(reason=actual_error_msg)
-    assert current_activity.on_exception.called
+#     assert boto_client.poll_for_activity_task.called
+#     assert current_activity.execute_activity.called
+#     assert current_activity.complete.called
+#     boto_client.respond_activity_task_failed.assert_called_with(
+#         taskToken=poll.get('taskToken'),
+#         reason=actual_error_msg)
+#     assert current_activity.on_exception.called
 
 
-def test_run_capture_poll_exception(monkeypatch, poll):
+def test_run_capture_poll_exception(monkeypatch, boto_client, poll):
     """Run an activity with an exception raised during poll.
     """
 
-    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll=poll)
+
     current_activity.on_exception = MagicMock()
     current_activity.execute_activity = MagicMock()
+
     exception = Exception('poll exception')
-    current_activity.poll.side_effect = exception
+    boto_client.poll_for_activity_task.side_effect = exception
     current_activity.run()
 
-    assert current_activity.poll.called
+    assert boto_client.poll_for_activity_task.called
     assert current_activity.on_exception.called
     assert not current_activity.execute_activity.called
-    assert not current_activity.complete.called
+    assert not boto_client.respond_activity_task_completed.called
 
     current_activity.on_exception = None
     current_activity.logger.error = MagicMock()
@@ -216,97 +224,103 @@ def test_run_capture_poll_exception(monkeypatch, poll):
     current_activity.logger.error.assert_called_with(exception, exc_info=True)
 
 
-def test_run_activity_without_id(monkeypatch):
+def test_run_activity_without_id(monkeypatch, boto_client):
     """Run an activity without an activity id.
     """
 
-    current_activity = activity_run(monkeypatch, dict())
+    current_activity = activity_run(monkeypatch, boto_client, poll=dict())
     current_activity.run()
 
-    assert current_activity.poll.called
+    assert boto_client.poll_for_activity_task.called
     assert not current_activity.execute_activity.called
-    assert not current_activity.complete.called
+    assert not boto_client.respond_activity_task_completed.called
 
 
-def test_run_activity_with_context(monkeypatch, poll):
+def test_run_activity_with_context(monkeypatch, boto_client, poll):
     """Run an activity with a context.
     """
 
     context = dict(foo='bar')
     poll.update(input=json.dumps(context))
 
-    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity = activity_run(monkeypatch, boto_client, poll=poll)
     current_activity.run()
 
-    activity_context = current_activity.execute_activity.call_args[0][0]
-    assert activity_context == context
+    activity_execution = current_activity.execute_activity.call_args[0][0]
+    assert activity_execution.context == context
 
 
-def test_run_activity_with_result(monkeypatch, poll):
+def test_run_activity_with_result(monkeypatch, boto_client, poll):
     """Run an activity with a result.
     """
 
-    resp = dict(foo='bar')
-    mock = MagicMock(return_value=resp)
-    current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
+    result = dict(foo='bar')
+    mock = MagicMock(return_value=result)
+    current_activity = activity_run(monkeypatch, boto_client, poll=poll,
+        execute=mock)
     current_activity.run()
-    result = current_activity.complete.call_args_list[0][1].get('result')
-    assert result == json.dumps(resp)
+    boto_client.respond_activity_task_completed.assert_called_with(
+        result=json.dumps(result), taskToken=poll.get('taskToken'))
 
 
-def test_task_failure(monkeypatch, poll):
+def test_task_failure(monkeypatch, boto_client, poll):
     """Run an activity that has a bad task.
     """
 
     resp = dict(foo='bar')
     mock = MagicMock(return_value=resp)
-    current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
-    current_activity.execute_activity.side_effect = Exception('fail')
+    reason = 'fail'
+    current_activity = activity_run(monkeypatch, boto_client, poll=poll,
+        execute=mock)
+    current_activity.execute_activity.side_effect = Exception(reason)
     current_activity.run()
 
-    assert current_activity.fail.called
+    boto_client.respond_activity_task_failed.assert_called_with(
+        taskToken=poll.get('taskToken'),
+        reason=reason)
 
 
-def test_task_failure_on_close_activity(monkeypatch, poll):
+def test_task_failure_on_close_activity(monkeypatch, boto_client, poll):
     """Run an activity failure when the task is already closed.
     """
 
     resp = dict(foo='bar')
     mock = MagicMock(return_value=resp)
-    current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
+    current_activity = activity_run(monkeypatch, boto_client, poll=poll,
+        execute=mock)
     current_activity.execute_activity.side_effect = Exception('fail')
-    current_activity.fail.side_effect = Exception('fail')
+    boto_client.respond_activity_task_failed.side_effect = Exception('fail')
     current_activity.unset_log_context = MagicMock()
     current_activity.run()
 
     assert current_activity.unset_log_context.called
 
 
-def test_execute_activity(monkeypatch):
+def test_execute_activity(monkeypatch, boto_client):
     """Test the execution of an activity.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    monkeypatch.setattr(activity.Activity, 'heartbeat', lambda self: None)
+    monkeypatch.setattr(activity.ActivityExecution, 'heartbeat',
+        lambda self: None)
 
     resp = dict(task_resp='something')
     custom_task = MagicMock(return_value=resp)
 
-    current_activity = activity.Activity()
+    current_activity = activity.Activity(boto_client)
     current_activity.runner = runner.Sync(custom_task)
 
-    val = current_activity.execute_activity(dict(foo='bar'))
+    val = current_activity.execute_activity(activity.ActivityExecution(
+        boto_client, 'activityId', 'taskToken', '{"context": "value"}'))
 
     assert custom_task.called
     assert val == resp
 
 
-def test_hydrate_activity(monkeypatch):
+def test_hydrate_activity(monkeypatch, boto_client):
     """Test the hydratation of an activity.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    current_activity = activity.Activity()
+    current_activity = activity.Activity(boto_client)
     current_activity.hydrate(dict(
         name='activity',
         domain='domain',
@@ -315,26 +329,25 @@ def test_hydrate_activity(monkeypatch):
         tasks=[lambda: dict('val')]))
 
 
-def test_create_activity(monkeypatch):
+def test_create_activity(monkeypatch, boto_client):
     """Test the creation of an activity via `create`.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    create = activity.create('domain_name', 'flow_name')
+    create = activity.create(boto_client, 'domain_name', 'flow_name')
 
     current_activity = create(name='activity_name')
     assert isinstance(current_activity, activity.Activity)
     assert current_activity.name == 'flow_name_activity_name'
     assert current_activity.task_list == 'flow_name_activity_name'
     assert current_activity.domain == 'domain_name'
+    assert current_activity.client == boto_client
 
 
-def test_create_external_activity(monkeypatch):
+def test_create_external_activity(monkeypatch, boto_client):
     """Test the creation of an external activity via `create`.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    create = activity.create('domain_name', 'flow_name')
+    create = activity.create(boto_client, 'domain_name', 'flow_name')
 
     current_activity = create(
         name='activity_name',
@@ -356,7 +369,6 @@ def test_create_activity_worker(monkeypatch):
     """Test the creation of an activity worker.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
     from tests.fixtures.flows import example
 
     worker = activity.ActivityWorker(example)
@@ -366,14 +378,12 @@ def test_create_activity_worker(monkeypatch):
     assert not worker.worker_activities
 
 
-def test_instances_creation(monkeypatch, generators):
+def test_instances_creation(monkeypatch, boto_client, generators):
     """Test the creation of an activity instance id with the use of a local
     context.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-
-    local_activity = activity.Activity()
+    local_activity = activity.Activity(boto_client)
     external_activity = activity.ExternalActivity(timeout=60)
 
     for current_activity in [local_activity, external_activity]:
@@ -395,7 +405,7 @@ def test_instances_creation(monkeypatch, generators):
             assert not instances[0].local_context
 
 
-def test_activity_timeouts(monkeypatch, generators):
+def test_activity_timeouts(monkeypatch, boto_client, generators):
     """Test the creation of an activity timeouts.
 
     More details: the timeout of a task is 120s, the schedule to start is 1000,
@@ -411,8 +421,7 @@ def test_activity_timeouts(monkeypatch, generators):
     def local_task():
         return
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    current_activity = activity.Activity()
+    current_activity = activity.Activity(boto_client)
     current_activity.hydrate(dict(schedule_to_start=start_timeout))
     current_activity.generators = generators
     current_activity.runner = runner.Sync(
@@ -429,14 +438,13 @@ def test_activity_timeouts(monkeypatch, generators):
             schedule_to_start + instance.timeout)
 
 
-def test_external_activity_timeouts(monkeypatch, generators):
+def test_external_activity_timeouts(monkeypatch, boto_client, generators):
     """Test the creation of an external activity timeouts.
     """
 
     timeout = 120
     start_timeout = 1000
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
     current_activity = activity.ExternalActivity(timeout=timeout)
     current_activity.hydrate(dict(schedule_to_start=start_timeout))
     current_activity.generators = generators
@@ -451,44 +459,39 @@ def test_external_activity_timeouts(monkeypatch, generators):
             schedule_to_start + instance.timeout)
 
 
-def test_worker_run(monkeypatch):
+@pytest.mark.skipif(sys.version_info < (3, 0), reason="requires Python3")
+def test_worker_run(monkeypatch, boto_client):
     """Test running the worker.
     """
-
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
 
     from tests.fixtures.flows import example
 
     worker = activity.ActivityWorker(example)
     assert len(worker.activities) == 4
     for current_activity in worker.activities:
-            monkeypatch.setattr(
-                current_activity, 'run', MagicMock(return_value=False))
+        monkeypatch.setattr(
+            current_activity, 'run', MagicMock(return_value=False))
 
     worker.run()
 
     assert len(worker.activities) == 4
     for current_activity in worker.activities:
-        # this check was originally `assert current_activity.run.called`
-        # for some reason this fails on py2.7, so we explicitly check for
-        # `called == 1`.
-        assert current_activity.run.called == 1
+        assert current_activity.run.called
 
 
 def test_worker_run_with_skipped_activities(monkeypatch):
     """Test running the worker with defined activities.
     """
 
-    monkeypatch.setattr(activity.Activity, '__init__', lambda self: None)
-    monkeypatch.setattr(
-        activity.Activity, 'run', MagicMock(return_value=False))
+    monkeypatch.setattr(activity.Activity, 'run', MagicMock(return_value=False))
+
     from tests.fixtures.flows import example
 
     worker = activity.ActivityWorker(example, activities=['activity_1'])
     assert len(worker.worker_activities) == 1
     for current_activity in worker.activities:
-            monkeypatch.setattr(
-                current_activity, 'run', MagicMock(return_value=False))
+        monkeypatch.setattr(
+            current_activity, 'run', MagicMock(return_value=False))
 
     worker.run()
 

@@ -13,10 +13,12 @@ you should create a main task that will then split the work.
 
 Create an activity::
 
+    import boto3
     from garcon import activity
 
     # First step is to create the workflow on a specific domain.
-    create = activity.create('domain')
+    client = boto3.client('swf')
+    create = activity.create(client, 'domain', 'workflow-name')
 
     initial_activity = create(
         # Name of your activity
@@ -37,17 +39,15 @@ Create an activity::
 
 """
 
-import backoff
-import boto.exception as boto_exception
-import boto.swf.layer2 as swf
+from botocore import exceptions
 import itertools
 import json
 import threading
+import backoff
 
 from garcon import log
 from garcon import utils
 from garcon import runner
-
 
 ACTIVITY_STANDBY = 0
 ACTIVITY_SCHEDULED = 1
@@ -243,13 +243,25 @@ class ActivityInstance:
         return activity_input
 
 
-class Activity(swf.ActivityWorker, log.GarconLogger):
+class Activity(log.GarconLogger):
     version = '1.0'
     task_list = None
 
+    def __init__(self, client):
+        """Instantiates an activity.
+
+        Args:
+            client: the boto client used for this activity.
+        """
+
+        self.client = client
+        self.name = None
+        self.domain = None
+        self.task_list = None
+
     @backoff.on_exception(
         backoff.expo,
-        boto_exception.SWFResponseError,
+        exceptions.ClientError,
         max_tries=5,
         giveup=utils.non_throttle_error,
         on_backoff=utils.throttle_backoff_handler,
@@ -266,9 +278,22 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             identity (str): Identity of the worker making the request, which
                 is recorded in the ActivityTaskStarted event in the AWS
                 console. This enables diagnostic tracing when problems arise.
+        Return:
+            ActivityExecution: activity execution.
         """
 
-        return self.poll(identity=identity)
+        additional_params = {}
+        if identity:
+            additional_params.update(identity=identity)
+
+        execution_definition = self.client.poll_for_activity_task(
+            domain=self.domain, taskList=dict(name=self.task_list),
+            **additional_params)
+
+        return ActivityExecution(
+            self.client, execution_definition.get('activityId'),
+            execution_definition.get('taskToken'),
+            execution_definition.get('input'))
 
     def run(self, identity=None):
         """Activity Runner.
@@ -278,15 +303,14 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         previous activity is consumed (context).
 
         Args:
-            activity_id (str): Identity of the worker making the request, which
+            identity (str): Identity of the worker making the request, which
                 is recorded in the ActivityTaskStarted event in the AWS
                 console. This enables diagnostic tracing when problems arise.
         """
-
         try:
             if identity:
                 self.logger.debug('Polling with {}'.format(identity))
-            activity_task = self.poll_for_activity(identity)
+            execution = self.poll_for_activity(identity)
         except Exception as error:
             # Catch exceptions raised during poll() to avoid an Activity thread
             # dying & worker daemon unable to process the affected Activity.
@@ -297,27 +321,20 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
             # when an exception occurs.
             if self.on_exception:
                 self.on_exception(self, error)
-
             self.logger.error(error, exc_info=True)
             return True
 
-        packed_context = activity_task.get('input')
-        context = dict()
-
-        if packed_context:
-            context = json.loads(packed_context)
-            self.set_log_context(context)
-
-        if 'activityId' in activity_task:
+        self.set_log_context(execution.context)
+        if execution.activity_id:
             try:
-                context = self.execute_activity(context)
-                self.complete(result=json.dumps(context))
+                context = self.execute_activity(execution)
+                execution.complete(context)
             except Exception as error:
                 # If the workflow has been stopped, it is not possible for the
                 # activity to be updated – it throws an exception which stops
                 # the worker immediately.
                 try:
-                    self.fail(reason=str(error)[:255])
+                    execution.fail(str(error)[:255])
                     if self.on_exception:
                         self.on_exception(self, error)
                 except Exception as error2:  # noqa: E722
@@ -327,14 +344,17 @@ class Activity(swf.ActivityWorker, log.GarconLogger):
         self.unset_log_context()
         return True
 
-    def execute_activity(self, context):
+    def execute_activity(self, activity):
         """Execute the runner.
 
         Args:
-            context (dict): The flow context.
+            execution (ActivityExecution): the activity execution.
+
+        Return:
+            dict: The result of the operation.
         """
 
-        return self.runner.execute(self, context)
+        return self.runner.execute(activity, activity.context)
 
     def hydrate(self, data):
         """Hydrate the task with information provided.
@@ -429,6 +449,7 @@ class ExternalActivity(Activity):
                 will be equal to the timeout.
         """
 
+        Activity.__init__(self, client=None)
         self.runner = runner.External(timeout=timeout, heartbeat=heartbeat)
 
     def run(self):
@@ -439,6 +460,56 @@ class ExternalActivity(Activity):
         """
 
         return False
+
+
+class ActivityExecution:
+
+    def __init__(self, client, activity_id, task_token, context):
+        """Create an an activity execution.
+
+        Args:
+            client (boto3.client): the boto client (for easy access if needed).
+            activity_id (str): the activity id.
+            task_token (str): the task token.
+            context (str): data for the execution.
+        """
+
+        self.client = client
+        self.activity_id = activity_id
+        self.task_token = task_token
+        self.context = context and json.loads(context) or dict()
+
+    def heartbeat(self, details=None):
+        """Create a task heartbeat.
+
+        Args:
+            details (str): details to add to the heartbeat.
+        """
+
+        self.client.record_activity_task_heartbeat(self.task_token,
+            details=details or '')
+
+    def fail(self, reason=None):
+        """Mark the activity execution as failed.
+
+        Args:
+            reason (str): optional reason for the failure.
+        """
+
+        self.client.respond_activity_task_failed(
+            taskToken=self.task_token,
+            reason=reason or '')
+
+    def complete(self, context=None):
+        """Mark the activity execution as completed.
+
+        Args:
+            context (str or dict): the context result of the operation.
+        """
+
+        self.client.respond_activity_task_completed(
+            taskToken=self.task_token,
+            result=json.dumps(context))
 
 
 class ActivityWorker():
@@ -550,7 +621,7 @@ class ActivityState:
         """Wait until ready.
         """
 
-        if not self.ready():
+        if not self.ready:
             raise ActivityInstanceNotReadyException()
 
 
@@ -561,11 +632,11 @@ def worker_runner(worker):
         worker (object): the Activity worker.
     """
 
-    while(worker.run()):
+    while (worker.run()):
         continue
 
 
-def create(domain, name, version='1.0', on_exception=None):
+def create(client, domain, workflow_name, version='1.0', on_exception=None):
     """Helper method to create Activities.
 
     The helper method simplifies the creation of an activity by setting the
@@ -577,8 +648,9 @@ def create(domain, name, version='1.0', on_exception=None):
         activity. Always make sure your activity name is unique.
 
     Args:
+        client (boto3.client): the boto3 client.
         domain (str): the domain name.
-        name (str): name of the activity.
+        workflow_name (str): workflow name.
         version (str): activity version.
         on_exception (callable): the error handler.
 
@@ -587,7 +659,7 @@ def create(domain, name, version='1.0', on_exception=None):
     """
 
     def wrapper(**options):
-        activity = Activity()
+        activity = Activity(client)
 
         if options.get('external'):
             activity = ExternalActivity(
@@ -595,7 +667,7 @@ def create(domain, name, version='1.0', on_exception=None):
                 heartbeat=options.get('heartbeat'))
 
         activity_name = '{name}_{activity}'.format(
-            name=name,
+            name=workflow_name,
             activity=options.get('name'))
 
         activity.hydrate(dict(
@@ -611,6 +683,7 @@ def create(domain, name, version='1.0', on_exception=None):
             schedule_to_start=options.get('schedule_to_start'),
             on_exception=options.get('on_exception') or on_exception))
         return activity
+
     return wrapper
 
 
@@ -636,7 +709,7 @@ def find_available_activities(flow, history, context):
             if states.get_last_state() != ACTIVITY_FAILED:
                 continue
             elif (not instance.retry or
-                    instance.retry < count_activity_failures(states)):
+                  instance.retry < count_activity_failures(states)):
                 raise Exception(
                     'The activity failures has exceeded its retry limit.')
 
