@@ -177,27 +177,27 @@ def test_run_capture_exception(monkeypatch, poll, boto_client):
     assert not boto_client.respond_activity_task_completed.called
 
 
-# def test_run_capture_fail_exception(monkeypatch, poll, boto_client):
-#     """Run an activity with an exception raised during failing execution.
-#     """
+def test_run_capture_fail_exception(monkeypatch, poll, boto_client):
+    """Run an activity with an exception raised during failing execution.
+    """
 
-#     current_activity = activity_run(monkeypatch, boto_client, poll)
-#     current_activity.on_exception = MagicMock()
-#     current_activity.complete = MagicMock()
-#     current_activity.fail = MagicMock()
-#     error_msg_long = "Error" * 100
-#     actual_error_msg = error_msg_long[:255]
-#     current_activity.complete.side_effect = Exception(error_msg_long)
-#     current_activity.fail.side_effect = Exception(error_msg_long)
-#     current_activity.run()
+    current_activity = activity_run(monkeypatch, boto_client, poll)
+    current_activity.on_exception = MagicMock()
+    current_activity.complete = MagicMock()
+    current_activity.fail = MagicMock()
+    error_msg_long = "Error" * 100
+    actual_error_msg = error_msg_long[:255]
+    current_activity.complete.side_effect = Exception(error_msg_long)
+    current_activity.fail.side_effect = Exception(error_msg_long)
+    current_activity.run()
 
-#     assert boto_client.poll_for_activity_task.called
-#     assert current_activity.execute_activity.called
-#     assert current_activity.complete.called
-#     boto_client.respond_activity_task_failed.assert_called_with(
-#         taskToken=poll.get('taskToken'),
-#         reason=actual_error_msg)
-#     assert current_activity.on_exception.called
+    assert boto_client.poll_for_activity_task.called
+    assert current_activity.execute_activity.called
+    assert current_activity.complete.called
+    boto_client.respond_activity_task_failed.assert_called_with(
+        taskToken=poll.get('taskToken'),
+        reason=actual_error_msg)
+    assert current_activity.on_exception.called
 
 
 def test_run_capture_poll_exception(monkeypatch, boto_client, poll):
