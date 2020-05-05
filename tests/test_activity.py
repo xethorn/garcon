@@ -173,6 +173,27 @@ def test_run_capture_exception(monkeypatch, poll):
     assert not current_activity.complete.called
 
 
+def test_run_capture_fail_exception(monkeypatch, poll):
+    """Run an activity with an exception raised during failing execution.
+    """
+
+    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity.on_exception = MagicMock()
+    current_activity.complete = MagicMock()
+    current_activity.fail = MagicMock()
+    error_msg_long = "Error" * 100
+    actual_error_msg = error_msg_long[:255]
+    current_activity.complete.side_effect = Exception(error_msg_long)
+    current_activity.fail.side_effect = Exception(error_msg_long)
+    current_activity.run()
+
+    assert current_activity.poll.called
+    assert current_activity.execute_activity.called
+    assert current_activity.complete.called
+    current_activity.fail.assert_called_with(reason=actual_error_msg)
+    assert current_activity.on_exception.called
+
+
 def test_run_capture_poll_exception(monkeypatch, poll):
     """Run an activity with an exception raised during poll.
     """
