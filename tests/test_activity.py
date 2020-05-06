@@ -173,6 +173,26 @@ def test_run_capture_exception(monkeypatch, poll):
     assert not current_activity.complete.called
 
 
+def test_run_capture_fail_exception(monkeypatch, poll):
+    """Run an activity with an exception raised during failing execution.
+    """
+
+    current_activity = activity_run(monkeypatch, poll=poll)
+    current_activity.on_exception = MagicMock()
+    current_activity.execute_activity = MagicMock()
+    current_activity.complete = MagicMock()
+    current_activity.fail = MagicMock()
+    error_msg_long = "Error" * 100
+    current_activity.complete.side_effect = Exception(error_msg_long)
+    current_activity.fail.side_effect = Exception(error_msg_long)
+    current_activity.run()
+
+    assert current_activity.execute_activity.called
+    assert not current_activity.complete.called
+    assert not current_activity.fail.called
+    assert current_activity.on_exception.called
+
+
 def test_run_capture_poll_exception(monkeypatch, poll):
     """Run an activity with an exception raised during poll.
     """
@@ -239,8 +259,10 @@ def test_task_failure(monkeypatch, poll):
 
     resp = dict(foo='bar')
     mock = MagicMock(return_value=resp)
+    reason = 'fail'
     current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
-    current_activity.execute_activity.side_effect = Exception('fail')
+    current_activity.on_exception = MagicMock()
+    current_activity.execute_activity.side_effect = Exception(reason)
     current_activity.run()
 
     assert current_activity.fail.called
@@ -253,6 +275,7 @@ def test_task_failure_on_close_activity(monkeypatch, poll):
     resp = dict(foo='bar')
     mock = MagicMock(return_value=resp)
     current_activity = activity_run(monkeypatch, poll=poll, execute=mock)
+    current_activity.on_exception = MagicMock()
     current_activity.execute_activity.side_effect = Exception('fail')
     current_activity.fail.side_effect = Exception('fail')
     current_activity.unset_log_context = MagicMock()
