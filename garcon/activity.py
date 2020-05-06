@@ -337,8 +337,9 @@ class Activity(log.GarconLogger):
                     execution.fail(str(error)[:255])
                     if self.on_exception:
                         self.on_exception(self, error)
-                except:
-                    pass
+                except Exception as error2:  # noqa: E722
+                    if self.on_exception:
+                        self.on_exception(self, error2)
 
         self.unset_log_context()
         return True
