@@ -6,7 +6,7 @@ Lightweight library for AWS SWF.
 Requirements
 ------------
 
-* Python 2.7, 3.4 (tested)
+* Python 3.5, 3.6, 3.7, 3.8 (tested)
 * Boto 2.34.0 (tested)
 
 
@@ -19,8 +19,6 @@ Code sample
 -----------
 
 The code sample shows a workflow that has 4 activities. It starts with activity_1, which after being completed schedule activity_2 and activity_3 to be ran in parallel. The workflow ends after the completion of activity_4 which requires activity_2 and activity_3 to be completed::
-
-  from __future__ import print_function
 
   from garcon import activity
   from garcon import runner

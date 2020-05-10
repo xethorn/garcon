@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from garcon import activity
 from garcon import runner
 

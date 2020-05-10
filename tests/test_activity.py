@@ -1,10 +1,7 @@
-from __future__ import absolute_import
-from __future__ import print_function
-try:
-    from unittest.mock import MagicMock
-except:
-    from mock import MagicMock
+from unittest.mock import MagicMock
 import json
+
+import boto.exception as boto_exception
 import pytest
 
 from garcon import activity
@@ -13,8 +10,6 @@ from garcon import runner
 from garcon import task
 from garcon import utils
 from tests.fixtures import decider
-
-import boto.exception as boto_exception
 
 
 def activity_run(
@@ -189,7 +184,7 @@ def test_run_capture_fail_exception(monkeypatch, poll):
 
     assert current_activity.execute_activity.called
     assert not current_activity.complete.called
-    assert not current_activity.fail.called
+    assert current_activity.fail.called
     assert current_activity.on_exception.called
 
 

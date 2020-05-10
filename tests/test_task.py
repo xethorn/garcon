@@ -1,9 +1,5 @@
-from __future__ import absolute_import
 import functools
-try:
-    from unittest.mock import MagicMock
-except:
-    from mock import MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
