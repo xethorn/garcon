@@ -10,7 +10,7 @@ Lightweight library for AWS SWF.
 Requirements
 ~~~~~~~~~~~~
 
--  Python 2.7, 3.4, 3.5, 3.6, 3.7 (tested)
+-  Python 3.5, 3.6, 3.7, 3.8 (tested)
 -  Boto3 (tested)
 
 Goal
@@ -32,8 +32,6 @@ completion of activity\_4 which requires activity\_2 and activity\_3 to
 be completed.
 
 .. code:: python
-
-    from __future__ import print_function
 
     import boto3
     from garcon import activity
@@ -87,7 +85,7 @@ Application architecture
 Contributors
 ~~~~~~~~~~~~
 
--  Michael Ortali
+-  Michael Ortali (Author)
 -  Adam Griffiths
 -  Raphael Antonmattei
 -  John Penner

@@ -1,9 +1,6 @@
-from __future__ import absolute_import
-try:
-    from unittest.mock import MagicMock
-except:
-    from mock import MagicMock
+from unittest.mock import MagicMock
 import json
+
 import pytest
 
 from garcon import decider
