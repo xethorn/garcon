@@ -1,15 +1,10 @@
-from __future__ import absolute_import
-from __future__ import print_function
-try:
-    from unittest.mock import MagicMock
-    from unittest.mock import ANY
-except:
-    from mock import MagicMock
-    from mock import ANY
-from botocore import exceptions
+from unittest.mock import MagicMock
+from unittest.mock import ANY
 import json
-import pytest
 import sys
+
+from botocore import exceptions
+import pytest
 
 from garcon import activity
 from garcon import event
