@@ -462,7 +462,7 @@ class ExternalActivity(Activity):
         return False
 
 
-class ActivityExecution:
+class ActivityExecution(log.GarconLogger):
 
     def __init__(self, client, activity_id, task_token, context):
         """Create an an activity execution.
@@ -486,7 +486,7 @@ class ActivityExecution:
             details (str): details to add to the heartbeat.
         """
 
-        self.client.record_activity_task_heartbeat(self.task_token,
+        self.client.record_activity_task_heartbeat(taskToken=self.task_token,
             details=details or '')
 
     def fail(self, reason=None):
