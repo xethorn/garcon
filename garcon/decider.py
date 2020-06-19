@@ -238,7 +238,7 @@ class DeciderWorker(log.GarconLogger):
         if 'events' not in poll:
             return True
 
-        history = self.get_history(identity, poll)
+        history = self.get_history(identity or '', poll)
         activity_states = self.get_activity_states(history)
         current_context = event.get_current_context(history)
         current_context.set_workflow_execution_info(poll, self.domain)
