@@ -56,7 +56,7 @@ class DeciderWorker(log.GarconLogger):
                 domain=self.domain,
                 identity=identity,
                 taskList=dict(name=self.task_list),
-                next_page_token=poll['nextPageToken'])
+                nextPageToken=poll['nextPageToken'])
 
             if 'events' in poll:
                 events += poll['events']

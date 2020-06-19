@@ -51,7 +51,7 @@ def test_get_history(monkeypatch):
 
     d.client.poll_for_decision_task.assert_called_with(
         domain=example.domain,
-        next_page_token='nextPage',
+        nextPageToken='nextPage',
         identity=identity,
         taskList=dict(name=d.task_list))
     assert len(resp) == len([
