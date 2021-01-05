@@ -1,4 +1,4 @@
-|Build Status| |Coverage Status|
+|BuildStatus| |Downloads| |CoverageStatus|
 
 Lightweight library for AWS SWF.
 
@@ -94,7 +94,11 @@ Contributors
 .. _rantonmattei: github.com/rantonmattei
 .. _someboredkiddo: github.com/someboredkiddo
 
-.. |Build Status| image:: https://travis-ci.org/xethorn/garcon.svg
-   :target: https://travis-ci.org/xethorn/garcon
-.. |Coverage Status| image:: https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master
+.. |BuildStatus| image:: https://github.com/xethorn/garcon/workflows/Build/badge.svg
+   :target: https://github.com/xethorn/garcon/actions?query=workflow%3ABuild+branch%3Amaster
+
+.. |Downloads| image:: https://img.shields.io/pypi/dm/garcon.svg
+   :target: https://coveralls.io/r/xethorn/garcon?branch=master
+
+.. |CoverageStatus| image:: https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master
    :target: https://coveralls.io/r/xethorn/garcon?branch=master
