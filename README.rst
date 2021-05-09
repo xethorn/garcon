@@ -25,47 +25,38 @@ case, you might want to use directly boto.
 Code sample
 ~~~~~~~~~~~
 
-The code sample shows a workflow that has 4 activities. It starts with
-activity\_1, which after being completed schedule activity\_2 and
-activity\_3 to be ran in parallel. The workflow ends after the
-completion of activity\_4 which requires activity\_2 and activity\_3 to
-be completed.
+The code sample shows a workflow where a user enters a coffee shop, orders
+a coffee and a chocolate chip cookie. All ordered items are prepared and
+completed, the user pays the order, receives the ordered items, then leave
+the shop.
+
+The code below represents the workflow decider. For the full code sample,
+see the `example`_.
 
 .. code:: python
 
-    import boto3
-    from garcon import activity
-    from garcon import runner
+    enter = schedule('enter', self.create_enter_coffee_activity)
+    enter.wait()
 
-    client = boto3.client('swf', region_name='us-east-1')
+    total = 0
+    for item in ['coffee', 'chocolate_chip_cookie']:
+        activity_name = 'order_{item}'.format(item=item)
+        activity = schedule(activity_name,
+            self.create_order_activity,
+            input={'item': item})
+        total += activity.result.get('price')
+        
+    pay_activity = schedule(
+        'pay', self.create_payment_activity,
+        input={'total': total})
 
-    domain = 'dev'
-    name = 'workflow_sample'
-    create = activity.create(client, domain, name)
+    get_order = schedule('get_order', self.create_get_order_activity)
+    
+    # Waiting for paying and getting the order to complete before
+    # we let the user leave the coffee shop.
+    pay_activity.wait(), get_order.wait()
+    schedule('leave_coffee_shop', self.create_leave_coffee_shop)
 
-    test_activity_1 = create(
-        name='activity_1',
-        run=runner.Sync(
-            lambda activity, context: print('activity_1')))
-
-    test_activity_2 = create(
-        name='activity_2',
-        requires=[test_activity_1],
-        run=runner.Async(
-            lambda activity, context: print('activity_2_task_1'),
-            lambda activity, context: print('activity_2_task_2')))
-
-    test_activity_3 = create(
-        name='activity_3',
-        requires=[test_activity_1],
-        run=runner.Sync(
-            lambda activity, context: print('activity_3')))
-
-    test_activity_4 = create(
-        name='activity_4',
-        requires=[test_activity_3, test_activity_2],
-        run=runner.Sync(
-            lambda activity, context: print('activity_4')))
 
 Application architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,6 +73,11 @@ Application architecture
     │   └── s3.py # Task that focuses on s3 files.
     └── task_example.py # Your different tasks.
 
+Trusted by
+~~~~~~~~~~
+
+|The Orchard| |Sony Music| |DataArt|
+
 Contributors
 ~~~~~~~~~~~~
 
@@ -93,6 +89,7 @@ Contributors
 .. _xethorn: github.com/xethorn
 .. _rantonmattei: github.com/rantonmattei
 .. _someboredkiddo: github.com/someboredkiddo
+.. _example: https://github.com/xethorn/garcon/tree/master/example/custom_decider
 
 .. |BuildStatus| image:: https://github.com/xethorn/garcon/workflows/Build/badge.svg
    :target: https://github.com/xethorn/garcon/actions?query=workflow%3ABuild+branch%3Amaster
@@ -102,3 +99,12 @@ Contributors
 
 .. |CoverageStatus| image:: https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master
    :target: https://coveralls.io/r/xethorn/garcon?branch=master
+   
+.. |The Orchard| image:: https://media-exp1.licdn.com/dms/image/C4E0BAQGi7o5g9l4JWg/company-logo_200_200/0/1519855981606?e=2159024400&v=beta&t=WBe-gOK2b30vUTGKbA025i9NFVDyOrS4Fotx9fMEZWo
+    :target: https://theorchard.com
+
+.. |Sony Music| image:: https://media-exp1.licdn.com/dms/image/C4D0BAQE9rvU-3ig-jg/company-logo_200_200/0/1604099587507?e=2159024400&v=beta&t=eAAubphf_fI-5GEb0ak1QnmtRHmc8466Qj4sGrCsWYc
+    :target: https://www.sonymusic.com/
+    
+.. |DataArt| image:: https://media-exp1.licdn.com/dms/image/C4E0BAQGRi6OIlNQG8Q/company-logo_200_200/0/1519856519357?e=2159024400&v=beta&t=oi6HQpzoeTKA082s-8Ft75vGTvAkEp4VHRyMLeOHXoo
+    :target: https://www.dataart.com/
