@@ -2,6 +2,7 @@
 
 Lightweight library for AWS SWF.
 
+
     Garcon deals with easy going clients and kitchens. It takes orders
     from clients (deciders), and send them to the kitchen (activities).
     Difficult clients and kitchens can be handled directly by the
@@ -45,13 +46,13 @@ see the `example`_.
             self.create_order_activity,
             input={'item': item})
         total += activity.result.get('price')
-        
+
     pay_activity = schedule(
         'pay', self.create_payment_activity,
         input={'total': total})
 
     get_order = schedule('get_order', self.create_get_order_activity)
-    
+
     # Waiting for paying and getting the order to complete before
     # we let the user leave the coffee shop.
     pay_activity.wait(), get_order.wait()
@@ -99,12 +100,12 @@ Contributors
 
 .. |CoverageStatus| image:: https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master
    :target: https://coveralls.io/r/xethorn/garcon?branch=master
-   
+
 .. |The Orchard| image:: https://media-exp1.licdn.com/dms/image/C4E0BAQGi7o5g9l4JWg/company-logo_200_200/0/1519855981606?e=2159024400&v=beta&t=WBe-gOK2b30vUTGKbA025i9NFVDyOrS4Fotx9fMEZWo
     :target: https://theorchard.com
 
 .. |Sony Music| image:: https://media-exp1.licdn.com/dms/image/C4D0BAQE9rvU-3ig-jg/company-logo_200_200/0/1604099587507?e=2159024400&v=beta&t=eAAubphf_fI-5GEb0ak1QnmtRHmc8466Qj4sGrCsWYc
     :target: https://www.sonymusic.com/
-    
+
 .. |DataArt| image:: https://media-exp1.licdn.com/dms/image/C4E0BAQGRi6OIlNQG8Q/company-logo_200_200/0/1519856519357?e=2159024400&v=beta&t=oi6HQpzoeTKA082s-8Ft75vGTvAkEp4VHRyMLeOHXoo
     :target: https://www.dataart.com/
