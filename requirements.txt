@@ -1,2 +1,2 @@
-backoff==1.4.3
-boto3==1.7.58
+backoff==2.2.1
+boto3==1.35.0

@@ -10,7 +10,7 @@ Lightweight library for AWS SWF.
 Requirements
 ~~~~~~~~~~~~
 
--  Python 3.5, 3.6, 3.7, 3.8 (tested)
+-  Python 3.8, 3.9, 3.10, 3.11, 3.12 (tested)
 -  Boto3 (tested)
 
 Goal
@@ -20,7 +20,7 @@ The goal of this library is to allow the creation of Amazon Simple
 Workflow without the need to worry about the orchestration of the
 different activities and building out the different workers. This
 framework aims to help simple workflows. If you have a more complex
-case, you might want to use directly boto.
+case, you might want to use directly boto3.
 
 Code sample
 ~~~~~~~~~~~
