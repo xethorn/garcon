@@ -537,13 +537,19 @@ class ActivityWorker():
     def run(self):
         """Run the activities.
         """
-
+        threads = []
         for activity in self.activities:
             if (self.worker_activities and
                     activity.name not in self.worker_activities):
                 continue
-            threading.Thread(target=worker_runner, args=(activity,)).start()
+            thread = threading.Thread(
+                target=worker_runner,
+                args=(activity,))
+            thread.start()
+            threads.append(thread)
 
+        for thread in threads:
+            thread.join()
 
 class ActivityState:
     """
