@@ -551,6 +551,7 @@ class ActivityWorker():
         for thread in threads:
             thread.join()
 
+
 class ActivityState:
     """
     Activity State
