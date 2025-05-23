@@ -11,7 +11,7 @@ Requirements
 ~~~~~~~~~~~~
 
 -  Python 3.8, 3.9, 3.10, 3.11, 3.12 (tested)
--  Boto3 (tested)
+-  Boto3 1.38.21 (tested)
 
 Goal
 ~~~~
@@ -20,7 +20,7 @@ The goal of this library is to allow the creation of Amazon Simple
 Workflow without the need to worry about the orchestration of the
 different activities and building out the different workers. This
 framework aims to help simple workflows. If you have a more complex
-case, you might want to use directly boto3.
+case, you might want to use directly Boto3.
 
 Code sample
 ~~~~~~~~~~~
@@ -61,17 +61,18 @@ see the `example`_.
 Application architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
+A typical Garcon application might be structured as follows:
+
 ::
 
     .
-    ├── cli.py # Instantiate the workers
-    ├── flows # All your application flows.
+    ├── cli.py           # Entry point to instantiate and run your SWF workers (deciders and activity workers).
+    ├── flows/           # Directory for your workflow definitions (deciders).
     │   ├── __init__.py
-    │   └── example.py # Should contain a structure similar to the code sample.
-    ├── tasks # All your tasks
-    │   ├── __init__.py
-    │   └── s3.py # Task that focuses on s3 files.
-    └── task_example.py # Your different tasks.
+    │   └── order_workflow.py  # Example: A decider for an order processing workflow.
+    └── tasks/           # Directory for your activity task implementations.
+        ├── __init__.py
+        └── payment_activity.py # Example: An activity task for processing payments.
 
 Trusted by
 ~~~~~~~~~~
@@ -95,16 +96,16 @@ Contributors
    :target: https://github.com/xethorn/garcon/actions?query=workflow%3ABuild+branch%3Amaster
 
 .. |Downloads| image:: https://img.shields.io/pypi/dm/garcon.svg
-   :target: https://coveralls.io/r/xethorn/garcon?branch=master
+   :target: https://pypi.org/project/garcon/
 
 .. |CoverageStatus| image:: https://coveralls.io/repos/xethorn/garcon/badge.svg?branch=master
    :target: https://coveralls.io/r/xethorn/garcon?branch=master
-   
+
 .. |The Orchard| image:: https://media-exp1.licdn.com/dms/image/C4E0BAQGi7o5g9l4JWg/company-logo_200_200/0/1519855981606?e=2159024400&v=beta&t=WBe-gOK2b30vUTGKbA025i9NFVDyOrS4Fotx9fMEZWo
-    :target: https://theorchard.com
+   :target: https://theorchard.com
 
 .. |Sony Music| image:: https://media-exp1.licdn.com/dms/image/C4D0BAQE9rvU-3ig-jg/company-logo_200_200/0/1604099587507?e=2159024400&v=beta&t=eAAubphf_fI-5GEb0ak1QnmtRHmc8466Qj4sGrCsWYc
-    :target: https://www.sonymusic.com/
-    
+   :target: https://www.sonymusic.com/
+
 .. |DataArt| image:: https://media-exp1.licdn.com/dms/image/C4E0BAQGRi6OIlNQG8Q/company-logo_200_200/0/1519856519357?e=2159024400&v=beta&t=oi6HQpzoeTKA082s-8Ft75vGTvAkEp4VHRyMLeOHXoo
-    :target: https://www.dataart.com/
+   :target: https://www.dataart.com/

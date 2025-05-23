@@ -1,4 +1,4 @@
 -r requirements.txt
 
-futures
-sphinxcontrib-napoleon
+sphinxcontrib-napoleon==0.7
+pockets>=0.9.1

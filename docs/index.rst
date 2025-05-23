@@ -6,50 +6,52 @@ Lightweight library for AWS SWF.
 Requirements
 ------------
 
-* Python 3.5, 3.6, 3.7, 3.8 (tested)
-* Boto 2.34.0 (tested)
+* Python 3.8, 3.9, 3.10, 3.11, 3.12 (tested)
+* Boto3 1.38.21 (tested)
 
 
 Goal
 ----
 
-The goal of this library is to allow the creation of Amazon Simple Workflow without the need to worry about the orchestration of the different activities and building out the different workers. This framework aims to help simple workflows. If you have a more complex case, you might want to use directly boto.
+The goal of this library is to allow the creation of Amazon Simple Workflow without the need to worry about the orchestration of the different activities and building out the different workers. This framework aims to help simple workflows. If you have a more complex case, you might want to use directly Boto3.
 
 Code sample
 -----------
 
-The code sample shows a workflow that has 4 activities. It starts with activity_1, which after being completed schedule activity_2 and activity_3 to be ran in parallel. The workflow ends after the completion of activity_4 which requires activity_2 and activity_3 to be completed::
+The code sample shows a workflow where a user enters a coffee shop, orders
+a coffee and a chocolate chip cookie. All ordered items are prepared and
+completed, the user pays the order, receives the ordered items, then leave
+the shop.
 
-  from garcon import activity
-  from garcon import runner
+The code below represents the workflow decider. For the full code sample,
+see the `example`_ directory in the repository.
 
+.. code:: python
 
-  domain = 'dev'
-  create = activity.create(domain)
+    enter = schedule('enter', self.create_enter_coffee_activity)
+    enter.wait()
 
-  test_activity_1 = create(
-      name='activity_1',
-      tasks=runner.Sync(
-          lambda activity, context: print('activity_1')))
+    total = 0
+    for item in ['coffee', 'chocolate_chip_cookie']:
+        activity_name = 'order_{item}'.format(item=item)
+        activity = schedule(activity_name,
+            self.create_order_activity,
+            input={'item': item})
+        total += activity.result.get('price')
+        
+    pay_activity = schedule(
+        'pay', self.create_payment_activity,
+        input={'total': total})
 
-  test_activity_2 = create(
-      name='activity_2',
-      requires=[test_activity_1],
-      run=runner.Async(
-          lambda activity, context: print('activity_2_task_1'),
-          lambda activity, context: print('activity_2_task_2')))
+    get_order = schedule('get_order', self.create_get_order_activity)
+    
+    # Waiting for paying and getting the order to complete before
+    # we let the user leave the coffee shop.
+    pay_activity.wait(), get_order.wait()
+    schedule('leave_coffee_shop', self.create_leave_coffee_shop)
 
-  test_activity_3 = create(
-      name='activity_3',
-      requires=[test_activity_1],
-      run=runner.Sync(
-          lambda activity, context: print('activity_3')))
+.. _example: https://github.com/xethorn/garcon/tree/master/example/custom_decider
 
-  test_activity_4 = create(
-      name='activity_4',
-      requires=[test_activity_3, test_activity_2],
-      run=runner.Sync(
-          lambda activity, context: print('activity_4')))
 
 Documentation
 -------------
