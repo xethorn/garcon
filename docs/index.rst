@@ -38,13 +38,13 @@ see the `example`_ directory in the repository.
             self.create_order_activity,
             input={'item': item})
         total += activity.result.get('price')
-        
+
     pay_activity = schedule(
         'pay', self.create_payment_activity,
         input={'total': total})
 
     get_order = schedule('get_order', self.create_get_order_activity)
-    
+
     # Waiting for paying and getting the order to complete before
     # we let the user leave the coffee shop.
     pay_activity.wait(), get_order.wait()
